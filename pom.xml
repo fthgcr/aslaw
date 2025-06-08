@@ -36,7 +36,7 @@
 		<dependency>
 			<groupId>org.infra-core</groupId>
 			<artifactId>infra-core</artifactId>
-			<version>0.0.22-SNAPSHOT</version>
+			<version>0.0.32-SNAPSHOT</version>
 		</dependency>
 
 		<!-- Spring Boot Dependencies -->
@@ -51,6 +51,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- Liquibase for Database Migration -->
+		<dependency>
+			<groupId>org.liquibase</groupId>
+			<artifactId>liquibase-core</artifactId>
 		</dependency>
 
 		<!-- OpenAPI Documentation -->

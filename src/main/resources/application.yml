@@ -8,13 +8,17 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+    drop-first: false
 
 springdoc:
   api-docs:
@@ -39,3 +43,4 @@ logging:
     com.aslaw: DEBUG
     com.infracore: DEBUG
     org.springframework.security: INFO
+    liquibase: INFO
