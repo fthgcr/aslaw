@@ -1,5 +1,6 @@
 package com.aslaw.entity;
 
+import com.infracore.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,9 +11,9 @@ import java.time.LocalDate;
 @Table(name = "cases")
 @Getter
 @Setter
-public class Case {
+public class Case extends BaseEntity {
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String caseNumber;
 
     @Column(nullable = false)
@@ -31,6 +32,10 @@ public class Case {
 
     @Column(nullable = false)
     private LocalDate filingDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_user_id")
+    private com.infracore.entity.User assignedUser;
 
     public enum CaseStatus {
         OPEN, IN_PROGRESS, PENDING, CLOSED

@@ -1,5 +1,6 @@
 package com.aslaw.entity;
 
+import com.infracore.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,7 +9,7 @@ import lombok.Setter;
 @Table(name = "documents")
 @Getter
 @Setter
-public class Document {
+public class Document extends BaseEntity {
 
     @Column(nullable = false)
     private String title;
