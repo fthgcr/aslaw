@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-@SpringBootApplication(scanBasePackages = {"com.aslaw", "com.infracore"})
+@SpringBootApplication(scanBasePackages = {"com.infracore", "com.aslaw"})
 @EntityScan(basePackages = {"com.aslaw.entity", "com.infracore.entity"})
 @EnableJpaRepositories(basePackages = {"com.aslaw.repository", "com.infracore.repository"})
 public class AslawBackendApplication {
@@ -13,5 +13,4 @@ public class AslawBackendApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(AslawBackendApplication.class, args);
 	}
-
 }

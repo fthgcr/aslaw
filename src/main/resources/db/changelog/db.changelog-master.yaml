@@ -13,4 +13,15 @@ databaseChangeLog:
       relativeToChangelogFile: false
   - include:
       file: db/changelog/v1.1/03-insert-test-data.sql
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/v1.2/00-create-documents-table.sql
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/v1.2/01-update-documents-table.sql
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/v1.2/03-recreate-documents-table.sql
+  - include:
+      file: db/changelog/v1.2/04-insert-test-data.sql
       relativeToChangelogFile: false 

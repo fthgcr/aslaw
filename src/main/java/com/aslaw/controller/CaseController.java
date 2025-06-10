@@ -45,9 +45,16 @@ public class CaseController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<List<Case>> getAllCases() {
         try {
+            System.out.println("CaseController: getAllCases called");
             List<Case> cases = caseService.getAllCases();
+            System.out.println("CaseController: Found " + cases.size() + " total cases");
+            for (Case c : cases) {
+                System.out.println("Case ID: " + c.getId() + ", Title: " + c.getTitle());
+            }
             return ResponseEntity.ok(cases);
         } catch (Exception e) {
+            System.out.println("CaseController: Error getting all cases: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -73,9 +80,13 @@ public class CaseController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<List<Case>> getCasesByClientId(@PathVariable Long clientId) {
         try {
+            System.out.println("CaseController: getCasesByClientId called with clientId: " + clientId);
             List<Case> cases = caseService.getCasesByClientId(clientId);
+            System.out.println("CaseController: Found " + cases.size() + " cases for client " + clientId);
             return ResponseEntity.ok(cases);
         } catch (Exception e) {
+            System.out.println("CaseController: Error getting cases for client " + clientId + ": " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -110,10 +121,16 @@ public class CaseController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<Case> getCaseById(@PathVariable Long id) {
         try {
+            System.out.println("CaseController: getCaseById called with id: " + id);
             return caseService.getCaseById(id)
-                    .map(caseEntity -> ResponseEntity.ok(caseEntity))
+                    .map(caseEntity -> {
+                        System.out.println("CaseController: Case found: " + caseEntity.getTitle());
+                        return ResponseEntity.ok(caseEntity);
+                    })
                     .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
+            System.out.println("CaseController: Error getting case: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -214,6 +231,31 @@ public class CaseController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Dava silinirken bir hata oluştu"));
+        }
+    }
+
+    /**
+     * Test endpoint - no authentication required
+     */
+    @GetMapping("/test")
+    public ResponseEntity<Map<String, Object>> testCases() {
+        try {
+            System.out.println("CaseController: TEST endpoint called");
+            List<Case> cases = caseService.getAllCases();
+            System.out.println("CaseController: TEST - Found " + cases.size() + " total cases");
+            
+            Map<String, Object> response = Map.of(
+                "totalCases", cases.size(),
+                "casesExist", cases.size() > 0,
+                "message", "Test endpoint working"
+            );
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.out.println("CaseController: TEST - Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 

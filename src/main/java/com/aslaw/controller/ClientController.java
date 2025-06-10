@@ -104,12 +104,17 @@ public class ClientController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createClient(@Valid @RequestBody User client) {
         try {
+            System.out.println("ClientController: createClient called with: " + client.getUsername());
             User createdClient = clientService.createClient(client);
+            System.out.println("ClientController: Client created successfully with ID: " + createdClient.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdClient);
         } catch (IllegalArgumentException e) {
+            System.out.println("ClientController: Validation error: " + e.getMessage());
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
+            System.out.println("ClientController: Unexpected error: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Müvekkil oluşturulurken bir hata oluştu"));
         }
