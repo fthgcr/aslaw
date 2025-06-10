@@ -1,0 +1,239 @@
+package com.aslaw.service;
+
+import com.infracore.entity.Role;
+import com.infracore.entity.User;
+import com.infracore.repository.RoleRepository;
+import com.infracore.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class ClientService {
+
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Autowired
+    ClientService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder){
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    /**
+     * Get all clients (users with USER role)
+     */
+    @Transactional(readOnly = true)
+    public List<User> getAllClients() {
+        return userRepository.findAll().stream()
+                .filter(user -> user.hasRole(Role.RoleName.USER))
+                .toList();
+    }
+
+    /**
+     * Get all clients with pagination
+     */
+    @Transactional(readOnly = true)
+    public Page<User> getAllClients(Pageable pageable) {
+        return userRepository.findAll(pageable)
+                .map(user -> user.hasRole(Role.RoleName.USER) ? user : null)
+                .map(user -> user);
+    }
+
+    /**
+     * Get client by ID
+     */
+    @Transactional(readOnly = true)
+    public Optional<User> getClientById(Long id) {
+        return userRepository.findById(id)
+                .filter(user -> user.hasRole(Role.RoleName.USER));
+    }
+
+    /**
+     * Create new client
+     */
+    @Transactional
+    public User createClient(User client) {
+        // Validate required fields
+        if (client.getUsername() == null || client.getUsername().trim().isEmpty()) {
+            throw new IllegalArgumentException("Kullanıcı adı gereklidir");
+        }
+        if (client.getEmail() == null || client.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("Email gereklidir");
+        }
+        if (client.getPassword() == null || client.getPassword().trim().isEmpty()) {
+            throw new IllegalArgumentException("Şifre gereklidir");
+        }
+
+        // Check if username already exists
+        if (userRepository.existsByUsername(client.getUsername())) {
+            throw new IllegalArgumentException("Bu kullanıcı adı zaten kullanılıyor");
+        }
+
+        // Check if email already exists
+        if (userRepository.existsByEmail(client.getEmail())) {
+            throw new IllegalArgumentException("Bu email adresi zaten kullanılıyor");
+        }
+
+        // Encode password
+        client.setPassword(passwordEncoder.encode(client.getPassword()));
+
+        // Set default values
+        client.setEnabled(true);
+        client.setActive(true);
+        client.setCreatedDate(LocalDateTime.now());
+        client.setUpdatedDate(LocalDateTime.now());
+
+        // Assign USER role
+        Optional<Role> userRole = roleRepository.findByName(Role.RoleName.USER);
+        if (userRole.isPresent()) {
+            client.addRole(userRole.get());
+        } else {
+            throw new RuntimeException("USER role not found in database");
+        }
+
+        return userRepository.save(client);
+    }
+
+    /**
+     * Update existing client
+     */
+    @Transactional
+    public User updateClient(Long id, User clientDetails) {
+        User existingClient = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Müvekkil bulunamadı: " + id));
+
+        // Verify it's actually a client (has USER role)
+        if (!existingClient.hasRole(Role.RoleName.USER)) {
+            throw new IllegalArgumentException("Bu kullanıcı bir müvekkil değil");
+        }
+
+        // Check if new username already exists (excluding current user)
+        if (!clientDetails.getUsername().equals(existingClient.getUsername()) &&
+            userRepository.existsByUsername(clientDetails.getUsername())) {
+            throw new IllegalArgumentException("Bu kullanıcı adı zaten kullanılıyor");
+        }
+
+        // Check if new email already exists (excluding current user)
+        if (!clientDetails.getEmail().equals(existingClient.getEmail()) &&
+            userRepository.existsByEmail(clientDetails.getEmail())) {
+            throw new IllegalArgumentException("Bu email adresi zaten kullanılıyor");
+        }
+
+        // Update fields
+        existingClient.setUsername(clientDetails.getUsername());
+        existingClient.setFirstName(clientDetails.getFirstName());
+        existingClient.setLastName(clientDetails.getLastName());
+        existingClient.setEmail(clientDetails.getEmail());
+        existingClient.setEnabled(clientDetails.isEnabled());
+        existingClient.setActive(clientDetails.isActive());
+        existingClient.setUpdatedDate(LocalDateTime.now());
+
+        // Update password only if provided
+        if (clientDetails.getPassword() != null && !clientDetails.getPassword().trim().isEmpty()) {
+            existingClient.setPassword(passwordEncoder.encode(clientDetails.getPassword()));
+        }
+
+        return userRepository.save(existingClient);
+    }
+
+    /**
+     * Delete client
+     */
+    @Transactional
+    public void deleteClient(Long id) {
+        User client = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Müvekkil bulunamadı: " + id));
+
+        // Verify it's actually a client (has USER role)
+        if (!client.hasRole(Role.RoleName.USER)) {
+            throw new IllegalArgumentException("Bu kullanıcı bir müvekkil değil");
+        }
+
+        userRepository.delete(client);
+    }
+
+    /**
+     * Toggle client status (enabled/disabled)
+     */
+    @Transactional
+    public User toggleClientStatus(Long id) {
+        User client = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Müvekkil bulunamadı: " + id));
+
+        // Verify it's actually a client (has USER role)
+        if (!client.hasRole(Role.RoleName.USER)) {
+            throw new IllegalArgumentException("Bu kullanıcı bir müvekkil değil");
+        }
+
+        client.setEnabled(!client.isEnabled());
+        client.setUpdatedDate(LocalDateTime.now());
+
+        return userRepository.save(client);
+    }
+
+    /**
+     * Search clients by keyword
+     */
+    @Transactional(readOnly = true)
+    public List<User> searchClients(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getAllClients();
+        }
+
+        String searchTerm = keyword.toLowerCase().trim();
+        return userRepository.findAll().stream()
+                .filter(user -> user.hasRole(Role.RoleName.USER))
+                .filter(user -> 
+                    user.getFirstName().toLowerCase().contains(searchTerm) ||
+                    user.getLastName().toLowerCase().contains(searchTerm) ||
+                    user.getUsername().toLowerCase().contains(searchTerm) ||
+                    user.getEmail().toLowerCase().contains(searchTerm)
+                )
+                .toList();
+    }
+
+    /**
+     * Get client statistics
+     */
+    @Transactional(readOnly = true)
+    public ClientStats getClientStats() {
+        List<User> allClients = getAllClients();
+        long totalClients = allClients.size();
+        long activeClients = allClients.stream()
+                .filter(User::isEnabled)
+                .count();
+        long inactiveClients = totalClients - activeClients;
+
+        return new ClientStats(totalClients, activeClients, inactiveClients);
+    }
+
+    /**
+     * Client statistics DTO
+     */
+    public static class ClientStats {
+        private final long totalClients;
+        private final long activeClients;
+        private final long inactiveClients;
+
+        public ClientStats(long totalClients, long activeClients, long inactiveClients) {
+            this.totalClients = totalClients;
+            this.activeClients = activeClients;
+            this.inactiveClients = inactiveClients;
+        }
+
+        public long getTotalClients() { return totalClients; }
+        public long getActiveClients() { return activeClients; }
+        public long getInactiveClients() { return inactiveClients; }
+    }
+} 
