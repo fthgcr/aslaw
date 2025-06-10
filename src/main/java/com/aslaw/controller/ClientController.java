@@ -30,12 +30,28 @@ public class ClientController {
     }
 
     /**
-     * Get all clients
+     * Get all clients with optional filtering
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
-    public ResponseEntity<List<User>> getAllClients() {
+    public ResponseEntity<List<User>> getAllClients(
+            @RequestParam(required = false) String firstName,
+            @RequestParam(required = false) String lastName,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) Boolean enabled,
+            @RequestParam(required = false) String search) {
         try {
+            // If any filter parameters are provided, use filtered search
+            if (firstName != null || lastName != null || email != null || 
+                username != null || phoneNumber != null || enabled != null || search != null) {
+                List<User> clients = clientService.getFilteredClients(
+                    firstName, lastName, email, username, phoneNumber, enabled, search);
+                return ResponseEntity.ok(clients);
+            }
+            
+            // Otherwise return all clients
             List<User> clients = clientService.getAllClients();
             return ResponseEntity.ok(clients);
         } catch (Exception e) {

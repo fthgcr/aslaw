@@ -183,6 +183,68 @@ public class ClientService {
     }
 
     /**
+     * Get filtered clients
+     */
+    @Transactional(readOnly = true)
+    public List<User> getFilteredClients(String firstName, String lastName, String email, 
+                                        String username, String phoneNumber, Boolean enabled, String search) {
+        return userRepository.findAll().stream()
+                .filter(user -> user.hasRole(Role.RoleName.USER))
+                .filter(user -> {
+                    // Global search filter
+                    if (search != null && !search.trim().isEmpty()) {
+                        String searchTerm = search.toLowerCase().trim();
+                        return user.getFirstName().toLowerCase().contains(searchTerm) ||
+                               user.getLastName().toLowerCase().contains(searchTerm) ||
+                               user.getUsername().toLowerCase().contains(searchTerm) ||
+                               user.getEmail().toLowerCase().contains(searchTerm);
+                    }
+                    return true;
+                })
+                .filter(user -> {
+                    // First name filter
+                    if (firstName != null && !firstName.trim().isEmpty()) {
+                        return user.getFirstName().toLowerCase().contains(firstName.toLowerCase().trim());
+                    }
+                    return true;
+                })
+                .filter(user -> {
+                    // Last name filter
+                    if (lastName != null && !lastName.trim().isEmpty()) {
+                        return user.getLastName().toLowerCase().contains(lastName.toLowerCase().trim());
+                    }
+                    return true;
+                })
+                .filter(user -> {
+                    // Email filter
+                    if (email != null && !email.trim().isEmpty()) {
+                        return user.getEmail().toLowerCase().contains(email.toLowerCase().trim());
+                    }
+                    return true;
+                })
+                .filter(user -> {
+                    // Username filter
+                    if (username != null && !username.trim().isEmpty()) {
+                        return user.getUsername().toLowerCase().contains(username.toLowerCase().trim());
+                    }
+                    return true;
+                })
+                .filter(user -> {
+                    // Phone number filter - Skip if User entity doesn't have phoneNumber field
+                    // This would require extending the User entity or using a different approach
+                    return true;
+                })
+                .filter(user -> {
+                    // Enabled status filter
+                    if (enabled != null) {
+                        return user.isEnabled() == enabled;
+                    }
+                    return true;
+                })
+                .toList();
+    }
+
+    /**
      * Search clients by keyword
      */
     @Transactional(readOnly = true)

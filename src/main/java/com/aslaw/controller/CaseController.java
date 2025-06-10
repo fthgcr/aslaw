@@ -1,0 +1,270 @@
+package com.aslaw.controller;
+
+import com.aslaw.entity.Case;
+import com.aslaw.entity.Client;
+import com.aslaw.service.CaseService;
+import com.aslaw.repository.ClientRepository;
+import com.infracore.entity.User;
+import com.infracore.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/cases")
+@CrossOrigin(origins = "http://localhost:4200")
+public class CaseController {
+
+    private final CaseService caseService;
+    private final UserRepository userRepository;
+    private final ClientRepository clientRepository;
+
+    @Autowired
+    public CaseController(CaseService caseService, UserRepository userRepository, ClientRepository clientRepository) {
+        this.caseService = caseService;
+        this.userRepository = userRepository;
+        this.clientRepository = clientRepository;
+    }
+
+    /**
+     * Get all cases
+     */
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<List<Case>> getAllCases() {
+        try {
+            List<Case> cases = caseService.getAllCases();
+            return ResponseEntity.ok(cases);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get cases by user ID
+     */
+    @GetMapping("/user/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<List<Case>> getCasesByUserId(@PathVariable Long userId) {
+        try {
+            List<Case> cases = caseService.getCasesByUserId(userId);
+            return ResponseEntity.ok(cases);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get cases by client ID
+     */
+    @GetMapping("/client/{clientId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<List<Case>> getCasesByClientId(@PathVariable Long clientId) {
+        try {
+            List<Case> cases = caseService.getCasesByClientId(clientId);
+            return ResponseEntity.ok(cases);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get cases with pagination
+     */
+    @GetMapping("/paginated")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<Page<Case>> getCasesPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "filingDate") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        try {
+            Sort sort = sortDir.equalsIgnoreCase("desc") ? 
+                Sort.by(sortBy).descending() : 
+                Sort.by(sortBy).ascending();
+            
+            Pageable pageable = PageRequest.of(page, size, sort);
+            Page<Case> cases = caseService.getAllCases(pageable);
+            return ResponseEntity.ok(cases);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get case by ID
+     */
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<Case> getCaseById(@PathVariable Long id) {
+        try {
+            return caseService.getCaseById(id)
+                    .map(caseEntity -> ResponseEntity.ok(caseEntity))
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Create new case
+     */
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<?> createCase(@Valid @RequestBody CaseCreateRequest request) {
+        try {
+            Case caseEntity = new Case();
+            caseEntity.setCaseNumber(request.getCaseNumber());
+            caseEntity.setTitle(request.getTitle());
+            caseEntity.setDescription(request.getDescription());
+            caseEntity.setStatus(request.getStatus());
+            caseEntity.setType(request.getType());
+            caseEntity.setFilingDate(request.getFilingDate());
+
+            // Set assigned user if provided
+            if (request.getAssignedUserId() != null) {
+                User assignedUser = userRepository.findById(request.getAssignedUserId())
+                        .orElseThrow(() -> new IllegalArgumentException("Kullanıcı bulunamadı: " + request.getAssignedUserId()));
+                caseEntity.setAssignedUser(assignedUser);
+            }
+
+            // Set client if provided
+            if (request.getClientId() != null) {
+                Client client = clientRepository.findById(request.getClientId())
+                        .orElseThrow(() -> new IllegalArgumentException("Müvekkil bulunamadı: " + request.getClientId()));
+                caseEntity.setClient(client);
+            }
+
+            Case createdCase = caseService.createCase(caseEntity);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdCase);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Dava oluşturulurken bir hata oluştu"));
+        }
+    }
+
+    /**
+     * Update existing case
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<?> updateCase(@PathVariable Long id, @Valid @RequestBody CaseCreateRequest request) {
+        try {
+            Case caseDetails = new Case();
+            caseDetails.setCaseNumber(request.getCaseNumber());
+            caseDetails.setTitle(request.getTitle());
+            caseDetails.setDescription(request.getDescription());
+            caseDetails.setStatus(request.getStatus());
+            caseDetails.setType(request.getType());
+            caseDetails.setFilingDate(request.getFilingDate());
+
+            // Set assigned user if provided
+            if (request.getAssignedUserId() != null) {
+                User assignedUser = userRepository.findById(request.getAssignedUserId())
+                        .orElseThrow(() -> new IllegalArgumentException("Kullanıcı bulunamadı: " + request.getAssignedUserId()));
+                caseDetails.setAssignedUser(assignedUser);
+            }
+
+            // Set client if provided
+            if (request.getClientId() != null) {
+                Client client = clientRepository.findById(request.getClientId())
+                        .orElseThrow(() -> new IllegalArgumentException("Müvekkil bulunamadı: " + request.getClientId()));
+                caseDetails.setClient(client);
+            }
+
+            Case updatedCase = caseService.updateCase(id, caseDetails);
+            return ResponseEntity.ok(updatedCase);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Dava güncellenirken bir hata oluştu"));
+        }
+    }
+
+    /**
+     * Delete case
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<?> deleteCase(@PathVariable Long id) {
+        try {
+            caseService.deleteCase(id);
+            return ResponseEntity.ok()
+                    .body(Map.of("message", "Dava başarıyla silindi"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Dava silinirken bir hata oluştu"));
+        }
+    }
+
+    /**
+     * Generate case number
+     */
+    @GetMapping("/generate-number")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<Map<String, String>> generateCaseNumber() {
+        try {
+            String caseNumber = caseService.generateCaseNumber();
+            return ResponseEntity.ok(Map.of("caseNumber", caseNumber));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // Request DTO for case creation/update
+    public static class CaseCreateRequest {
+        private String caseNumber;
+        private String title;
+        private String description;
+        private Case.CaseStatus status;
+        private Case.CaseType type;
+        private LocalDate filingDate;
+        private Long assignedUserId;
+        private Long clientId;
+
+        // Getters and setters
+        public String getCaseNumber() { return caseNumber; }
+        public void setCaseNumber(String caseNumber) { this.caseNumber = caseNumber; }
+
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+
+        public Case.CaseStatus getStatus() { return status; }
+        public void setStatus(Case.CaseStatus status) { this.status = status; }
+
+        public Case.CaseType getType() { return type; }
+        public void setType(Case.CaseType type) { this.type = type; }
+
+        public LocalDate getFilingDate() { return filingDate; }
+        public void setFilingDate(LocalDate filingDate) { this.filingDate = filingDate; }
+
+        public Long getAssignedUserId() { return assignedUserId; }
+        public void setAssignedUserId(Long assignedUserId) { this.assignedUserId = assignedUserId; }
+
+        public Long getClientId() { return clientId; }
+        public void setClientId(Long clientId) { this.clientId = clientId; }
+    }
+} 
