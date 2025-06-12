@@ -25,7 +25,7 @@ INSERT INTO users (
 ) 
 VALUES (
     'admin',
-    '$2a$10$9VfJl8gHIe7C4R6V4KxVmu7lq9qx1gJP1Vp7vfvC4oJm8qO4H2K9G', -- password: admin123
+    '$2a$10$3holcqSglu1auy5ftdr5v.HFMr7WP/6gm5ipQUCPDvZwEg8hSFouq', -- password: 123123
     'admin@lawportal.com',
     'System',
     'Admin',
