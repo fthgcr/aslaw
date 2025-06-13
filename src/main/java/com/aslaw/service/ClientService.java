@@ -71,8 +71,29 @@ public class ClientService {
         if (client.getEmail() == null || client.getEmail().trim().isEmpty()) {
             throw new IllegalArgumentException("Email gereklidir");
         }
+        // Generate username if not provided but firstName and lastName are available
+        if ((client.getUsername() == null || client.getUsername().trim().isEmpty()) &&
+            client.getFirstName() != null && !client.getFirstName().trim().isEmpty() &&
+            client.getLastName() != null && !client.getLastName().trim().isEmpty()) {
+            
+            String normalizedFirstName = normalizeString(client.getFirstName().trim());
+            String normalizedLastName = normalizeString(client.getLastName().trim());
+            String generatedUsername = normalizedFirstName + "." + normalizedLastName;
+            
+            // Check if username already exists, if so add a number
+            String finalUsername = generatedUsername;
+            int counter = 1;
+            while (userRepository.existsByUsername(finalUsername)) {
+                finalUsername = generatedUsername + counter;
+                counter++;
+            }
+            
+            client.setUsername(finalUsername);
+        }
+
+        // Generate default password if not provided
         if (client.getPassword() == null || client.getPassword().trim().isEmpty()) {
-            throw new IllegalArgumentException("Şifre gereklidir");
+            client.setPassword("123456");
         }
 
         // Check if username already exists
@@ -103,6 +124,20 @@ public class ClientService {
         }
 
         return userRepository.save(client);
+    }
+
+    /**
+     * Normalize string for username generation (convert Turkish characters and make lowercase)
+     */
+    private String normalizeString(String str) {
+        return str.toLowerCase()
+                .replace("ğ", "g")
+                .replace("ü", "u")
+                .replace("ş", "s")
+                .replace("ı", "i")
+                .replace("ö", "o")
+                .replace("ç", "c")
+                .replaceAll("[^a-z0-9]", ""); // Remove any non-alphanumeric characters
     }
 
     /**

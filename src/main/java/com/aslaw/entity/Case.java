@@ -1,6 +1,7 @@
 package com.aslaw.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.infracore.entity.BaseEntity;
 import com.infracore.entity.User;
 import jakarta.persistence.*;
@@ -33,10 +34,14 @@ public class Case extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_user_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "roles", "version", 
+                          "createdDate", "lastModifiedDate", "createdBy", "lastModifiedBy", "deleted"})
     private User assignedUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "roles", "version",
+                          "createdDate", "lastModifiedDate", "createdBy", "lastModifiedBy", "deleted"})
     private User client;
 
     public enum CaseStatus {

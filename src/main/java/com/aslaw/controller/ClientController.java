@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/clients")
+@RequestMapping("/api/clients")
 @CrossOrigin(origins = "http://localhost:4200")
 public class ClientController {
 
@@ -102,7 +102,7 @@ public class ClientController {
      */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> createClient(@Valid @RequestBody User client) {
+    public ResponseEntity<?> createClient(@RequestBody User client) {
         try {
             System.out.println("ClientController: createClient called with: " + client.getUsername());
             User createdClient = clientService.createClient(client);

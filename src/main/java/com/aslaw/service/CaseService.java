@@ -57,7 +57,7 @@ public class CaseService {
      */
     @Transactional(readOnly = true)
     public Optional<Case> getCaseById(Long id) {
-        return caseRepository.findById(id);
+        return caseRepository.findByIdWithDetails(id);
     }
 
     /**
