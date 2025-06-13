@@ -33,12 +33,10 @@ public class Case extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_user_id")
-    @JsonIgnore
     private User assignedUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id")
-    @JsonIgnore
     private User client;
 
     public enum CaseStatus {

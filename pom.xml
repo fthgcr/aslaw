@@ -36,7 +36,7 @@
 		<dependency>
 			<groupId>org.infra-core</groupId>
 			<artifactId>infra-core</artifactId>
-			<version>0.0.35-SNAPSHOT</version>
+			<version>0.0.36-SNAPSHOT</version>
 		</dependency>
 
 		<!-- Spring Boot Dependencies -->

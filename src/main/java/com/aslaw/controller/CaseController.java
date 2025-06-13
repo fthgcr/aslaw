@@ -35,22 +35,15 @@ public class CaseController {
     }
 
     /**
-     * Get all cases
+     * Get all cases sorted by creation date in descending order
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<List<Case>> getAllCases() {
         try {
-            System.out.println("CaseController: getAllCases called");
-            List<Case> cases = caseService.getAllCases();
-            System.out.println("CaseController: Found " + cases.size() + " total cases");
-            for (Case c : cases) {
-                System.out.println("Case ID: " + c.getId() + ", Title: " + c.getTitle());
-            }
+            List<Case> cases = caseService.getAllCasesSortedByCreationDate();
             return ResponseEntity.ok(cases);
         } catch (Exception e) {
-            System.out.println("CaseController: Error getting all cases: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -98,15 +91,15 @@ public class CaseController {
     }
 
     /**
-     * Get cases with pagination
+     * Get cases with pagination and sorting
      */
     @GetMapping("/paginated")
     @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<Page<Case>> getCasesPaginated(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDir) {
+            @RequestParam(defaultValue = "createdDate") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
         try {
             Sort sort = sortDir.equalsIgnoreCase("desc") ? 
                 Sort.by(sortBy).descending() : 
