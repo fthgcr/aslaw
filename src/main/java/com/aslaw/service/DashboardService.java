@@ -1,10 +1,8 @@
 package com.aslaw.service;
 
 import com.aslaw.entity.Case;
-import com.aslaw.entity.Client;
 import com.aslaw.entity.Document;
 import com.aslaw.repository.CaseRepository;
-import com.aslaw.repository.ClientRepository;
 import com.aslaw.repository.DocumentRepository;
 import com.infracore.entity.Role;
 import com.infracore.entity.User;
@@ -26,17 +24,15 @@ import java.util.Comparator;
 public class DashboardService {
 
     private final UserRepository userRepository;
-    private final ClientRepository clientRepository;
     private final CaseRepository caseRepository;
     private final DocumentRepository documentRepository;
 
     @Autowired
-    public DashboardService(UserRepository userRepository, 
-                           ClientRepository clientRepository,
+    public DashboardService(UserRepository userRepository,
+
                            CaseRepository caseRepository,
                            DocumentRepository documentRepository) {
         this.userRepository = userRepository;
-        this.clientRepository = clientRepository;
         this.caseRepository = caseRepository;
         this.documentRepository = documentRepository;
     }

@@ -1,9 +1,7 @@
 package com.aslaw.controller;
 
 import com.aslaw.entity.Case;
-import com.aslaw.entity.Client;
 import com.aslaw.service.CaseService;
-import com.aslaw.repository.ClientRepository;
 import com.infracore.entity.User;
 import com.infracore.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,13 +27,11 @@ public class CaseController {
 
     private final CaseService caseService;
     private final UserRepository userRepository;
-    private final ClientRepository clientRepository;
 
     @Autowired
-    public CaseController(CaseService caseService, UserRepository userRepository, ClientRepository clientRepository) {
+    public CaseController(CaseService caseService, UserRepository userRepository) {
         this.caseService = caseService;
         this.userRepository = userRepository;
-        this.clientRepository = clientRepository;
     }
 
     /**
@@ -80,13 +76,23 @@ public class CaseController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<List<Case>> getCasesByClientId(@PathVariable Long clientId) {
         try {
-            System.out.println("CaseController: getCasesByClientId called with clientId: " + clientId);
             List<Case> cases = caseService.getCasesByClientId(clientId);
-            System.out.println("CaseController: Found " + cases.size() + " cases for client " + clientId);
             return ResponseEntity.ok(cases);
         } catch (Exception e) {
-            System.out.println("CaseController: Error getting cases for client " + clientId + ": " + e.getMessage());
-            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get cases by status
+     */
+    @GetMapping("/status/{status}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<List<Case>> getCasesByStatus(@PathVariable Case.CaseStatus status) {
+        try {
+            List<Case> cases = caseService.getCasesByStatus(status);
+            return ResponseEntity.ok(cases);
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -99,8 +105,8 @@ public class CaseController {
     public ResponseEntity<Page<Case>> getCasesPaginated(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "filingDate") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
         try {
             Sort sort = sortDir.equalsIgnoreCase("desc") ? 
                 Sort.by(sortBy).descending() : 
@@ -159,7 +165,7 @@ public class CaseController {
 
             // Set client if provided
             if (request.getClientId() != null) {
-                Client client = clientRepository.findById(request.getClientId())
+                User client = userRepository.findById(request.getClientId())
                         .orElseThrow(() -> new IllegalArgumentException("Müvekkil bulunamadı: " + request.getClientId()));
                 caseEntity.setClient(client);
             }
@@ -199,7 +205,7 @@ public class CaseController {
 
             // Set client if provided
             if (request.getClientId() != null) {
-                Client client = clientRepository.findById(request.getClientId())
+                User client = userRepository.findById(request.getClientId())
                         .orElseThrow(() -> new IllegalArgumentException("Müvekkil bulunamadı: " + request.getClientId()));
                 caseDetails.setClient(client);
             }
@@ -223,8 +229,7 @@ public class CaseController {
     public ResponseEntity<?> deleteCase(@PathVariable Long id) {
         try {
             caseService.deleteCase(id);
-            return ResponseEntity.ok()
-                    .body(Map.of("message", "Dava başarıyla silindi"));
+            return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));

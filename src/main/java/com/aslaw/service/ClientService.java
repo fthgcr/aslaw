@@ -137,6 +137,9 @@ public class ClientService {
         existingClient.setEmail(clientDetails.getEmail());
         existingClient.setEnabled(clientDetails.isEnabled());
         existingClient.setActive(clientDetails.isActive());
+        existingClient.setPhoneNumber(clientDetails.getPhoneNumber());
+        existingClient.setAddress(clientDetails.getAddress());
+        existingClient.setNotes(clientDetails.getNotes());
         existingClient.setUpdatedDate(LocalDateTime.now());
 
         // Update password only if provided
@@ -186,66 +189,37 @@ public class ClientService {
      * Get filtered clients
      */
     @Transactional(readOnly = true)
-    public List<User> getFilteredClients(String firstName, String lastName, String email, 
-                                        String username, String phoneNumber, Boolean enabled, String search) {
-        return userRepository.findAll().stream()
+    public List<User> getFilteredClients(
+            String firstName,
+            String lastName,
+            String email,
+            String username,
+            String phoneNumber,
+            Boolean enabled,
+            String search) {
+        
+        List<User> allClients = userRepository.findAll().stream()
                 .filter(user -> user.hasRole(Role.RoleName.USER))
-                .filter(user -> {
-                    // Global search filter
-                    if (search != null && !search.trim().isEmpty()) {
-                        String searchTerm = search.toLowerCase().trim();
-                        return user.getFirstName().toLowerCase().contains(searchTerm) ||
-                               user.getLastName().toLowerCase().contains(searchTerm) ||
-                               user.getUsername().toLowerCase().contains(searchTerm) ||
-                               user.getEmail().toLowerCase().contains(searchTerm);
-                    }
-                    return true;
-                })
-                .filter(user -> {
-                    // First name filter
-                    if (firstName != null && !firstName.trim().isEmpty()) {
-                        return user.getFirstName().toLowerCase().contains(firstName.toLowerCase().trim());
-                    }
-                    return true;
-                })
-                .filter(user -> {
-                    // Last name filter
-                    if (lastName != null && !lastName.trim().isEmpty()) {
-                        return user.getLastName().toLowerCase().contains(lastName.toLowerCase().trim());
-                    }
-                    return true;
-                })
-                .filter(user -> {
-                    // Email filter
-                    if (email != null && !email.trim().isEmpty()) {
-                        return user.getEmail().toLowerCase().contains(email.toLowerCase().trim());
-                    }
-                    return true;
-                })
-                .filter(user -> {
-                    // Username filter
-                    if (username != null && !username.trim().isEmpty()) {
-                        return user.getUsername().toLowerCase().contains(username.toLowerCase().trim());
-                    }
-                    return true;
-                })
-                .filter(user -> {
-                    // Phone number filter - Skip if User entity doesn't have phoneNumber field
-                    // This would require extending the User entity or using a different approach
-                    return true;
-                })
-                .filter(user -> {
-                    // Enabled status filter
-                    if (enabled != null) {
-                        return user.isEnabled() == enabled;
-                    }
-                    return true;
-                })
+                .toList();
+
+        return allClients.stream()
+                .filter(client -> firstName == null || client.getFirstName().toLowerCase().contains(firstName.toLowerCase()))
+                .filter(client -> lastName == null || client.getLastName().toLowerCase().contains(lastName.toLowerCase()))
+                .filter(client -> email == null || client.getEmail().toLowerCase().contains(email.toLowerCase()))
+                .filter(client -> username == null || client.getUsername().toLowerCase().contains(username.toLowerCase()))
+                .filter(client -> phoneNumber == null || (client.getPhoneNumber() != null && client.getPhoneNumber().toLowerCase().contains(phoneNumber.toLowerCase())))
+                .filter(client -> enabled == null || client.isEnabled() == enabled)
+                .filter(client -> search == null || 
+                    client.getFirstName().toLowerCase().contains(search.toLowerCase()) ||
+                    client.getLastName().toLowerCase().contains(search.toLowerCase()) ||
+                    client.getUsername().toLowerCase().contains(search.toLowerCase()) ||
+                    client.getEmail().toLowerCase().contains(search.toLowerCase()) ||
+                    (client.getPhoneNumber() != null && client.getPhoneNumber().toLowerCase().contains(search.toLowerCase())))
                 .toList();
     }
 
     /**
-     * Search clients by keyword
+     * Search clients
      */
     @Transactional(readOnly = true)
     public List<User> searchClients(String keyword) {
@@ -260,7 +234,8 @@ public class ClientService {
                     user.getFirstName().toLowerCase().contains(searchTerm) ||
                     user.getLastName().toLowerCase().contains(searchTerm) ||
                     user.getUsername().toLowerCase().contains(searchTerm) ||
-                    user.getEmail().toLowerCase().contains(searchTerm)
+                    user.getEmail().toLowerCase().contains(searchTerm) ||
+                    (user.getPhoneNumber() != null && user.getPhoneNumber().toLowerCase().contains(searchTerm))
                 )
                 .toList();
     }

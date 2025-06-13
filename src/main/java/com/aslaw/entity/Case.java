@@ -2,6 +2,7 @@ package com.aslaw.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.infracore.entity.BaseEntity;
+import com.infracore.entity.User;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
@@ -33,12 +34,12 @@ public class Case extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_user_id")
     @JsonIgnore
-    private com.infracore.entity.User assignedUser;
+    private User assignedUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id")
     @JsonIgnore
-    private Client client;
+    private User client;
 
     public enum CaseStatus {
         OPEN, IN_PROGRESS, PENDING, CLOSED
@@ -97,19 +98,19 @@ public class Case extends BaseEntity {
         this.filingDate = filingDate;
     }
 
-    public com.infracore.entity.User getAssignedUser() {
+    public User getAssignedUser() {
         return assignedUser;
     }
 
-    public void setAssignedUser(com.infracore.entity.User assignedUser) {
+    public void setAssignedUser(User assignedUser) {
         this.assignedUser = assignedUser;
     }
 
-    public Client getClient() {
+    public User getClient() {
         return client;
     }
 
-    public void setClient(Client client) {
+    public void setClient(User client) {
         this.client = client;
     }
 }

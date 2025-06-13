@@ -1,9 +1,7 @@
 package com.aslaw.service;
 
 import com.aslaw.entity.Case;
-import com.aslaw.entity.Client;
 import com.aslaw.repository.CaseRepository;
-import com.aslaw.repository.ClientRepository;
 import com.infracore.entity.User;
 import com.infracore.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,13 +20,11 @@ public class CaseService {
 
     private final CaseRepository caseRepository;
     private final UserRepository userRepository;
-    private final ClientRepository clientRepository;
 
     @Autowired
-    public CaseService(CaseRepository caseRepository, UserRepository userRepository, ClientRepository clientRepository) {
+    public CaseService(CaseRepository caseRepository, UserRepository userRepository) {
         this.caseRepository = caseRepository;
         this.userRepository = userRepository;
-        this.clientRepository = clientRepository;
     }
 
     /**
