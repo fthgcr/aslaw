@@ -34,4 +34,65 @@ public class DashboardController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    /**
+     * Get client status summary
+     */
+    @GetMapping("/client-status")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<DashboardService.ClientStatusSummary> getClientStatusSummary() {
+        try {
+            DashboardService.ClientStatusSummary summary = dashboardService.getClientStatusSummary();
+            return ResponseEntity.ok(summary);
+        } catch (Exception e) {
+            System.out.println("DashboardController: Error getting client status summary: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get case types distribution
+     */
+    @GetMapping("/case-types")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<java.util.List<DashboardService.CaseTypeDistribution>> getCaseTypesDistribution() {
+        try {
+            java.util.List<DashboardService.CaseTypeDistribution> distribution = dashboardService.getCaseTypesDistribution();
+            return ResponseEntity.ok(distribution);
+        } catch (Exception e) {
+            System.out.println("DashboardController: Error getting case types distribution: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get case status distribution
+     */
+    @GetMapping("/case-status")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<java.util.List<DashboardService.CaseStatusDistribution>> getCaseStatusDistribution() {
+        try {
+            java.util.List<DashboardService.CaseStatusDistribution> distribution = dashboardService.getCaseStatusDistribution();
+            return ResponseEntity.ok(distribution);
+        } catch (Exception e) {
+            System.out.println("DashboardController: Error getting case status distribution: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/recent-activities")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<java.util.List<DashboardService.RecentActivity>> getRecentActivities() {
+        try {
+            java.util.List<DashboardService.RecentActivity> activities = dashboardService.getRecentActivities();
+            return ResponseEntity.ok(activities);
+        } catch (Exception e) {
+            System.out.println("DashboardController: Error getting recent activities: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 } 

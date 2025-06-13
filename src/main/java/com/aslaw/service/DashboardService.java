@@ -15,7 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Comparator;
 
 @Service
 public class DashboardService {
@@ -34,6 +39,118 @@ public class DashboardService {
         this.clientRepository = clientRepository;
         this.caseRepository = caseRepository;
         this.documentRepository = documentRepository;
+    }
+
+    /**
+     * Get client status summary
+     */
+    @Transactional(readOnly = true)
+    public ClientStatusSummary getClientStatusSummary() {
+        List<User> allClients = userRepository.findAll().stream()
+                .filter(user -> user.hasRole(Role.RoleName.USER))
+                .toList();
+
+        long activeClients = allClients.stream()
+                .filter(User::isEnabled)
+                .count();
+        
+        long inactiveClients = allClients.size() - activeClients;
+
+        return new ClientStatusSummary(activeClients, inactiveClients);
+    }
+
+    /**
+     * Get case types distribution
+     */
+    @Transactional(readOnly = true)
+    public List<CaseTypeDistribution> getCaseTypesDistribution() {
+        List<Case> allCases = caseRepository.findAll();
+        
+        Map<Case.CaseType, Long> typeCount = allCases.stream()
+                .collect(Collectors.groupingBy(Case::getType, Collectors.counting()));
+
+        return typeCount.entrySet().stream()
+                .map(entry -> new CaseTypeDistribution(entry.getKey(), entry.getValue()))
+                .sorted((a, b) -> Long.compare(b.getCount(), a.getCount()))
+                .toList();
+    }
+
+    /**
+     * Get case status distribution
+     */
+    @Transactional(readOnly = true)
+    public List<CaseStatusDistribution> getCaseStatusDistribution() {
+        List<Case> allCases = caseRepository.findAll();
+        
+        Map<Case.CaseStatus, Long> statusCount = allCases.stream()
+                .collect(Collectors.groupingBy(Case::getStatus, Collectors.counting()));
+
+        return statusCount.entrySet().stream()
+                .map(entry -> new CaseStatusDistribution(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    /**
+     * Get recent activities
+     */
+    @Transactional(readOnly = true)
+    public List<RecentActivity> getRecentActivities() {
+        List<RecentActivity> activities = new ArrayList<>();
+        
+        // Get recent clients (users with USER role)
+        List<User> recentClients = userRepository.findAll().stream()
+                .filter(user -> user.hasRole(Role.RoleName.USER))
+                .filter(user -> user.getCreatedDate() != null)
+                .sorted((a, b) -> b.getCreatedDate().compareTo(a.getCreatedDate()))
+                .limit(3)
+                .toList();
+        
+        for (User client : recentClients) {
+            activities.add(new RecentActivity(
+                "CLIENT_ADDED",
+                "Yeni müvekkil eklendi: " + client.getFirstName() + " " + client.getLastName(),
+                client.getCreatedDate(),
+                "pi-user-plus"
+            ));
+        }
+        
+        // Get recent cases
+        List<Case> recentCases = caseRepository.findAll().stream()
+                .filter(caseItem -> caseItem.getCreatedDate() != null)
+                .sorted((a, b) -> b.getCreatedDate().compareTo(a.getCreatedDate()))
+                .limit(3)
+                .toList();
+        
+        for (Case caseItem : recentCases) {
+            activities.add(new RecentActivity(
+                "CASE_CREATED",
+                "Yeni dava oluşturuldu: " + caseItem.getTitle(),
+                caseItem.getCreatedDate(),
+                "pi-briefcase"
+            ));
+        }
+        
+        // Get recent documents
+        List<Document> recentDocuments = documentRepository.findAll().stream()
+                .filter(document -> document.getCreatedDate() != null)
+                .sorted((a, b) -> b.getCreatedDate().compareTo(a.getCreatedDate()))
+                .limit(3)
+                .toList();
+        
+        for (Document document : recentDocuments) {
+            activities.add(new RecentActivity(
+                "DOCUMENT_UPLOADED",
+                "Doküman yüklendi: " + document.getTitle(),
+                document.getCreatedDate(),
+                "pi-file-o"
+            ));
+        }
+        
+        // Sort all activities by date and return top 5
+        return activities.stream()
+                .sorted((a, b) -> b.getCreatedDate().compareTo(a.getCreatedDate()))
+                .limit(5)
+                .toList();
     }
 
     /**
@@ -127,5 +244,111 @@ public class DashboardService {
         public long getTotalCases() { return totalCases; }
         public long getActiveCases() { return activeCases; }
         public long getTotalDocuments() { return totalDocuments; }
+    }
+
+    /**
+     * Client status summary DTO
+     */
+    public static class ClientStatusSummary {
+        private final long activeClients;
+        private final long inactiveClients;
+
+        public ClientStatusSummary(long activeClients, long inactiveClients) {
+            this.activeClients = activeClients;
+            this.inactiveClients = inactiveClients;
+        }
+
+        public long getActiveClients() { return activeClients; }
+        public long getInactiveClients() { return inactiveClients; }
+        public long getTotalClients() { return activeClients + inactiveClients; }
+    }
+
+    /**
+     * Case type distribution DTO
+     */
+    public static class CaseTypeDistribution {
+        private final Case.CaseType type;
+        private final long count;
+
+        public CaseTypeDistribution(Case.CaseType type, long count) {
+            this.type = type;
+            this.count = count;
+        }
+
+        public Case.CaseType getType() { return type; }
+        public long getCount() { return count; }
+        public String getTypeName() {
+            return switch (type) {
+                case CIVIL -> "Hukuk";
+                case CRIMINAL -> "Ceza";
+                case FAMILY -> "Aile";
+                case CORPORATE -> "Ticaret";
+                case REAL_ESTATE -> "Emlak";
+                case INTELLECTUAL_PROPERTY -> "Fikri Mülkiyet";
+                case CAR_DEPRECIATION -> "Araç Değer Kaybı";
+                case OTHER -> "Diğer";
+            };
+        }
+    }
+
+    /**
+     * Case status distribution DTO
+     */
+    public static class CaseStatusDistribution {
+        private final Case.CaseStatus status;
+        private final long count;
+
+        public CaseStatusDistribution(Case.CaseStatus status, long count) {
+            this.status = status;
+            this.count = count;
+        }
+
+        public Case.CaseStatus getStatus() { return status; }
+        public long getCount() { return count; }
+        public String getStatusName() {
+            return switch (status) {
+                case OPEN -> "Açık";
+                case IN_PROGRESS -> "Devam Eden";
+                case PENDING -> "Beklemede";
+                case CLOSED -> "Kapalı";
+            };
+        }
+    }
+
+    /**
+     * Recent activity DTO
+     */
+    public static class RecentActivity {
+        private final String type;
+        private final String description;
+        private final LocalDateTime createdDate;
+        private final String icon;
+
+        public RecentActivity(String type, String description, LocalDateTime createdDate, String icon) {
+            this.type = type;
+            this.description = description;
+            this.createdDate = createdDate;
+            this.icon = icon;
+        }
+
+        public String getType() { return type; }
+        public String getDescription() { return description; }
+        public LocalDateTime getCreatedDate() { return createdDate; }
+        public String getIcon() { return icon; }
+        
+        public String getTimeAgo() {
+            LocalDateTime now = LocalDateTime.now();
+            long minutes = ChronoUnit.MINUTES.between(createdDate, now);
+            long hours = ChronoUnit.HOURS.between(createdDate, now);
+            long days = ChronoUnit.DAYS.between(createdDate, now);
+            
+            if (minutes < 60) {
+                return minutes <= 1 ? "1 dakika önce" : minutes + " dakika önce";
+            } else if (hours < 24) {
+                return hours <= 1 ? "1 saat önce" : hours + " saat önce";
+            } else {
+                return days <= 1 ? "1 gün önce" : days + " gün önce";
+            }
+        }
     }
 } 
