@@ -7,6 +7,7 @@ import com.aslaw.repository.DocumentRepository;
 import com.infracore.entity.Role;
 import com.infracore.entity.User;
 import com.infracore.repository.UserRepository;
+import com.infracore.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,15 +25,17 @@ import java.util.Comparator;
 public class DashboardService {
 
     private final UserRepository userRepository;
+    private final UserService userService;
     private final CaseRepository caseRepository;
     private final DocumentRepository documentRepository;
 
     @Autowired
     public DashboardService(UserRepository userRepository,
-
+                           UserService userService,
                            CaseRepository caseRepository,
                            DocumentRepository documentRepository) {
         this.userRepository = userRepository;
+        this.userService = userService;
         this.caseRepository = caseRepository;
         this.documentRepository = documentRepository;
     }
@@ -42,17 +45,14 @@ public class DashboardService {
      */
     @Transactional(readOnly = true)
     public ClientStatusSummary getClientStatusSummary() {
-        List<User> allClients = userRepository.findAll().stream()
-                .filter(user -> user.hasRole(Role.RoleName.USER))
-                .toList();
+        // infra-core'daki yeni metodları kullan
+        List<User> allClients = userRepository.findAllClients();
+        List<User> activeClients = userRepository.findActiveClients();
 
-        long activeClients = allClients.stream()
-                .filter(User::isEnabled)
-                .count();
-        
-        long inactiveClients = allClients.size() - activeClients;
+        long activeCount = activeClients.size();
+        long inactiveCount = allClients.size() - activeCount;
 
-        return new ClientStatusSummary(activeClients, inactiveClients);
+        return new ClientStatusSummary(activeCount, inactiveCount);
     }
 
     /**
@@ -93,9 +93,8 @@ public class DashboardService {
     public List<RecentActivity> getRecentActivities() {
         List<RecentActivity> activities = new ArrayList<>();
         
-        // Get recent clients (users with USER role)
-        List<User> recentClients = userRepository.findAll().stream()
-                .filter(user -> user.hasRole(Role.RoleName.USER))
+        // Get recent clients using new method
+        List<User> recentClients = userRepository.findAllClients().stream()
                 .filter(user -> user.getCreatedDate() != null)
                 .sorted((a, b) -> b.getCreatedDate().compareTo(a.getCreatedDate()))
                 .limit(3)
@@ -154,18 +153,15 @@ public class DashboardService {
      */
     @Transactional(readOnly = true)
     public DashboardStats getDashboardStats() {
-        // Total clients (users with USER role)
-        long totalClients = userRepository.findAll().stream()
-                .filter(user -> user.hasRole(Role.RoleName.USER))
-                .count();
+        // Total clients using new method
+        long totalClients = userService.countUsersByRole(Role.RoleName.USER);
 
         // This month's new clients
         YearMonth currentMonth = YearMonth.now();
         LocalDateTime startOfMonth = currentMonth.atDay(1).atStartOfDay();
         LocalDateTime endOfMonth = currentMonth.atEndOfMonth().atTime(23, 59, 59);
         
-        long monthlyNewClients = userRepository.findAll().stream()
-                .filter(user -> user.hasRole(Role.RoleName.USER))
+        long monthlyNewClients = userRepository.findAllClients().stream()
                 .filter(user -> user.getCreatedDate() != null 
                     && user.getCreatedDate().isAfter(startOfMonth) 
                     && user.getCreatedDate().isBefore(endOfMonth))
@@ -176,8 +172,7 @@ public class DashboardService {
         LocalDateTime startOfPreviousMonth = previousMonth.atDay(1).atStartOfDay();
         LocalDateTime endOfPreviousMonth = previousMonth.atEndOfMonth().atTime(23, 59, 59);
         
-        long previousMonthNewClients = userRepository.findAll().stream()
-                .filter(user -> user.hasRole(Role.RoleName.USER))
+        long previousMonthNewClients = userRepository.findAllClients().stream()
                 .filter(user -> user.getCreatedDate() != null 
                     && user.getCreatedDate().isAfter(startOfPreviousMonth) 
                     && user.getCreatedDate().isBefore(endOfPreviousMonth))
