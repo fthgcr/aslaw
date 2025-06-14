@@ -2,8 +2,10 @@ package com.aslaw.service;
 
 import com.aslaw.entity.Case;
 import com.aslaw.repository.CaseRepository;
+import com.infracore.entity.ActivityLog;
 import com.infracore.entity.User;
 import com.infracore.repository.UserRepository;
+import com.infracore.service.ActivityLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -21,11 +23,13 @@ public class CaseService {
 
     private final CaseRepository caseRepository;
     private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     @Autowired
-    public CaseService(CaseRepository caseRepository, UserRepository userRepository) {
+    public CaseService(CaseRepository caseRepository, UserRepository userRepository, ActivityLogService activityLogService) {
         this.caseRepository = caseRepository;
         this.userRepository = userRepository;
+        this.activityLogService = activityLogService;
     }
 
     /**
@@ -103,8 +107,30 @@ public class CaseService {
         }
 
         // Timestamps will be set automatically by BaseEntity
+        Case savedCase = caseRepository.save(caseEntity);
 
-        return caseRepository.save(caseEntity);
+        // Log activity
+        String clientName = savedCase.getClient() != null ? 
+            savedCase.getClient().getFirstName() + " " + savedCase.getClient().getLastName() : null;
+        
+        if (clientName != null) {
+            activityLogService.logCaseCreated(
+                savedCase.getId(), 
+                savedCase.getTitle(), 
+                savedCase.getClient().getId(), 
+                clientName
+            );
+        } else {
+            activityLogService.logActivity(
+                ActivityLog.ActivityType.CASE_CREATED,
+                "Yeni dava oluşturuldu: " + savedCase.getTitle(),
+                savedCase.getId(),
+                savedCase.getTitle(),
+                ActivityLog.EntityType.CASE
+            );
+        }
+
+        return savedCase;
     }
 
     /**

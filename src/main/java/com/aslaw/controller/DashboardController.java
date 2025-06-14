@@ -95,4 +95,20 @@ public class DashboardController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    /**
+     * Create test activities for demonstration
+     */
+    @PostMapping("/create-test-activities")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> createTestActivities() {
+        try {
+            dashboardService.createTestActivities();
+            return ResponseEntity.ok("Test activities created successfully");
+        } catch (Exception e) {
+            System.out.println("DashboardController: Error creating test activities: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating test activities");
+        }
+    }
 } 

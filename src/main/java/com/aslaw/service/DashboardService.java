@@ -4,9 +4,11 @@ import com.aslaw.entity.Case;
 import com.aslaw.entity.Document;
 import com.aslaw.repository.CaseRepository;
 import com.aslaw.repository.DocumentRepository;
+import com.infracore.entity.ActivityLog;
 import com.infracore.entity.Role;
 import com.infracore.entity.User;
 import com.infracore.repository.UserRepository;
+import com.infracore.service.ActivityLogService;
 import com.infracore.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,16 +30,19 @@ public class DashboardService {
     private final UserService userService;
     private final CaseRepository caseRepository;
     private final DocumentRepository documentRepository;
+    private final ActivityLogService activityLogService;
 
     @Autowired
     public DashboardService(UserRepository userRepository,
                            UserService userService,
                            CaseRepository caseRepository,
-                           DocumentRepository documentRepository) {
+                           DocumentRepository documentRepository,
+                           ActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.caseRepository = caseRepository;
         this.documentRepository = documentRepository;
+        this.activityLogService = activityLogService;
     }
 
     /**
@@ -87,13 +92,33 @@ public class DashboardService {
     }
 
     /**
-     * Get recent activities
+     * Get recent activities from activity log with fallback to entity-based activities
      */
     @Transactional(readOnly = true)
     public List<RecentActivity> getRecentActivities() {
+        try {
+            List<ActivityLog> activityLogs = activityLogService.getRecentActivities(10);
+            
+            if (!activityLogs.isEmpty()) {
+                return activityLogs.stream()
+                        .map(this::convertToRecentActivity)
+                        .toList();
+            }
+        } catch (Exception e) {
+            System.out.println("DashboardService: Error getting activity logs, falling back to entity-based activities: " + e.getMessage());
+        }
+        
+        // Fallback to entity-based activities if no activity logs found
+        return getEntityBasedActivities();
+    }
+
+    /**
+     * Get activities from entities (fallback method)
+     */
+    private List<RecentActivity> getEntityBasedActivities() {
         List<RecentActivity> activities = new ArrayList<>();
         
-        // Get recent clients using new method
+        // Get recent clients
         List<User> recentClients = userRepository.findAllClients().stream()
                 .filter(user -> user.getCreatedDate() != null)
                 .sorted((a, b) -> b.getCreatedDate().compareTo(a.getCreatedDate()))
@@ -102,10 +127,13 @@ public class DashboardService {
         
         for (User client : recentClients) {
             activities.add(new RecentActivity(
-                "CLIENT_ADDED",
+                "CLIENT_CREATED",
                 "Yeni müvekkil eklendi: " + client.getFirstName() + " " + client.getLastName(),
                 client.getCreatedDate(),
-                "pi-user-plus"
+                "pi-user-plus",
+                new RecentActivity.PerformedBy(0L, "System", "User", "system"),
+                new RecentActivity.TargetEntity(client.getId(), client.getFirstName() + " " + client.getLastName(), "CLIENT"),
+                null
             ));
         }
         
@@ -117,11 +145,18 @@ public class DashboardService {
                 .toList();
         
         for (Case caseItem : recentCases) {
+            String clientName = caseItem.getClient() != null ? 
+                caseItem.getClient().getFirstName() + " " + caseItem.getClient().getLastName() : "Bilinmeyen Müvekkil";
+            
             activities.add(new RecentActivity(
                 "CASE_CREATED",
                 "Yeni dava oluşturuldu: " + caseItem.getTitle(),
                 caseItem.getCreatedDate(),
-                "pi-briefcase"
+                "pi-briefcase",
+                new RecentActivity.PerformedBy(0L, "System", "User", "system"),
+                new RecentActivity.TargetEntity(caseItem.getId(), caseItem.getTitle(), "CASE"),
+                caseItem.getClient() != null ? 
+                    new RecentActivity.RelatedEntity(caseItem.getClient().getId(), clientName, "CLIENT") : null
             ));
         }
         
@@ -133,11 +168,23 @@ public class DashboardService {
                 .toList();
         
         for (Document document : recentDocuments) {
+            String clientName = "Bilinmeyen Müvekkil";
+            Long clientId = 0L;
+            
+            if (document.getLegalCase() != null && document.getLegalCase().getClient() != null) {
+                clientName = document.getLegalCase().getClient().getFirstName() + " " + 
+                           document.getLegalCase().getClient().getLastName();
+                clientId = document.getLegalCase().getClient().getId();
+            }
+            
             activities.add(new RecentActivity(
-                "DOCUMENT_UPLOADED",
+                "DOCUMENT_CREATED",
                 "Doküman yüklendi: " + document.getTitle(),
                 document.getCreatedDate(),
-                "pi-file-o"
+                "pi-file-plus",
+                new RecentActivity.PerformedBy(0L, "System", "User", "system"),
+                new RecentActivity.TargetEntity(document.getId(), document.getTitle(), "DOCUMENT"),
+                new RecentActivity.RelatedEntity(clientId, clientName, "CLIENT")
             ));
         }
         
@@ -146,6 +193,71 @@ public class DashboardService {
                 .sorted((a, b) -> b.getCreatedDate().compareTo(a.getCreatedDate()))
                 .limit(5)
                 .toList();
+    }
+
+    /**
+     * Convert ActivityLog to RecentActivity
+     */
+    private RecentActivity convertToRecentActivity(ActivityLog activityLog) {
+        RecentActivity.PerformedBy performedBy = new RecentActivity.PerformedBy(
+            activityLog.getPerformedById(),
+            activityLog.getPerformedByName().split(" ")[0], // firstName
+            activityLog.getPerformedByName().contains(" ") ? 
+                activityLog.getPerformedByName().substring(activityLog.getPerformedByName().indexOf(" ") + 1) : "", // lastName
+            activityLog.getPerformedByUsername()
+        );
+
+        RecentActivity.TargetEntity targetEntity = new RecentActivity.TargetEntity(
+            activityLog.getTargetEntityId(),
+            activityLog.getTargetEntityName(),
+            activityLog.getTargetEntityType().name()
+        );
+
+        RecentActivity.RelatedEntity relatedEntity = null;
+        if (activityLog.getRelatedEntityId() != null) {
+            relatedEntity = new RecentActivity.RelatedEntity(
+                activityLog.getRelatedEntityId(),
+                activityLog.getRelatedEntityName(),
+                activityLog.getRelatedEntityType().name()
+            );
+        }
+
+        return new RecentActivity(
+            activityLog.getType().name(),
+            activityLog.getDescription(),
+            activityLog.getCreatedDate(),
+            getIconForActivityType(activityLog.getType()),
+            performedBy,
+            targetEntity,
+            relatedEntity
+        );
+    }
+
+    /**
+     * Get icon for activity type
+     */
+    private String getIconForActivityType(ActivityLog.ActivityType type) {
+        switch (type) {
+            case CLIENT_CREATED:
+            case CLIENT_UPDATED:
+                return "pi-user-plus";
+            case CASE_CREATED:
+            case CASE_UPDATED:
+            case CASE_ASSIGNED:
+                return "pi-briefcase";
+            case DOCUMENT_CREATED:
+            case DOCUMENT_UPDATED:
+                return "pi-file-plus";
+            case USER_CREATED:
+            case USER_UPDATED:
+                return "pi-users";
+            case CLIENT_DELETED:
+            case CASE_DELETED:
+            case DOCUMENT_DELETED:
+                return "pi-trash";
+            default:
+                return "pi-clock";
+        }
     }
 
     /**
@@ -309,25 +421,45 @@ public class DashboardService {
     /**
      * Recent activity DTO
      */
-    public static class RecentActivity {
+        public static class RecentActivity {
         private final String type;
         private final String description;
         private final LocalDateTime createdDate;
         private final String icon;
+        private final String timeAgo;
+        
+        // User who performed the action
+        private final PerformedBy performedBy;
+        
+        // Target entity details
+        private final TargetEntity targetEntity;
+        
+        // Related entity (e.g., client for a case, case for a document)
+        private final RelatedEntity relatedEntity;
 
-        public RecentActivity(String type, String description, LocalDateTime createdDate, String icon) {
+        public RecentActivity(String type, String description, LocalDateTime createdDate, String icon,
+                             PerformedBy performedBy, TargetEntity targetEntity, RelatedEntity relatedEntity) {
             this.type = type;
             this.description = description;
             this.createdDate = createdDate;
             this.icon = icon;
+            this.performedBy = performedBy;
+            this.targetEntity = targetEntity;
+            this.relatedEntity = relatedEntity;
+            this.timeAgo = calculateTimeAgo(createdDate);
         }
 
         public String getType() { return type; }
         public String getDescription() { return description; }
         public LocalDateTime getCreatedDate() { return createdDate; }
         public String getIcon() { return icon; }
-        
-        public String getTimeAgo() {
+        public PerformedBy getPerformedBy() { return performedBy; }
+        public TargetEntity getTargetEntity() { return targetEntity; }
+        public RelatedEntity getRelatedEntity() { return relatedEntity; }
+
+        public String getTimeAgo() { return timeAgo; }
+
+        private String calculateTimeAgo(LocalDateTime dateTime) {
             LocalDateTime now = LocalDateTime.now();
             long minutes = ChronoUnit.MINUTES.between(createdDate, now);
             long hours = ChronoUnit.HOURS.between(createdDate, now);
@@ -341,5 +473,97 @@ public class DashboardService {
                 return days <= 1 ? "1 gün önce" : days + " gün önce";
             }
         }
+
+        public static class PerformedBy {
+            private final Long id;
+            private final String firstName;
+            private final String lastName;
+            private final String username;
+
+            public PerformedBy(Long id, String firstName, String lastName, String username) {
+                this.id = id;
+                this.firstName = firstName;
+                this.lastName = lastName;
+                this.username = username;
+            }
+
+            public Long getId() { return id; }
+            public String getFirstName() { return firstName; }
+            public String getLastName() { return lastName; }
+            public String getUsername() { return username; }
+        }
+
+        public static class TargetEntity {
+            private final Long id;
+            private final String name;
+            private final String type;
+
+            public TargetEntity(Long id, String name, String type) {
+                this.id = id;
+                this.name = name;
+                this.type = type;
+            }
+
+            public Long getId() { return id; }
+            public String getName() { return name; }
+            public String getType() { return type; }
+        }
+
+        public static class RelatedEntity {
+            private final Long id;
+            private final String name;
+            private final String type;
+
+            public RelatedEntity(Long id, String name, String type) {
+                this.id = id;
+                this.name = name;
+                this.type = type;
+            }
+
+            public Long getId() { return id; }
+            public String getName() { return name; }
+            public String getType() { return type; }
+        }
+    }
+
+    /**
+     * Create test activities for demonstration purposes
+     */
+    @Transactional
+    public void createTestActivities() {
+        // Create some test activity logs
+        activityLogService.logActivity(
+            ActivityLog.ActivityType.CLIENT_CREATED,
+            "Test müvekkil eklendi",
+            1L,
+            "Ahmet Yılmaz",
+            ActivityLog.EntityType.CLIENT
+        );
+
+        activityLogService.logActivity(
+            ActivityLog.ActivityType.CASE_CREATED,
+            "Test davası oluşturuldu",
+            1L,
+            "Trafik Kazası Davası",
+            ActivityLog.EntityType.CASE,
+            1L,
+            "Ahmet Yılmaz",
+            ActivityLog.EntityType.CLIENT,
+            "Test dava detayları"
+        );
+
+        activityLogService.logActivity(
+            ActivityLog.ActivityType.DOCUMENT_CREATED,
+            "Test dokümanı yüklendi",
+            1L,
+            "Dilekçe.pdf",
+            ActivityLog.EntityType.DOCUMENT,
+            1L,
+            "Ahmet Yılmaz",
+            ActivityLog.EntityType.CLIENT,
+            "Test doküman detayları"
+        );
+
+        System.out.println("DashboardService: Test activities created successfully");
     }
 } 

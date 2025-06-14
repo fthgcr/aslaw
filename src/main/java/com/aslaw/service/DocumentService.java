@@ -5,6 +5,8 @@ import com.aslaw.entity.Case;
 import com.aslaw.entity.Document;
 import com.aslaw.repository.CaseRepository;
 import com.aslaw.repository.DocumentRepository;
+import com.infracore.entity.ActivityLog;
+import com.infracore.service.ActivityLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -31,14 +33,16 @@ public class DocumentService {
 
     private final DocumentRepository documentRepository;
     private final CaseRepository caseRepository;
+    private final ActivityLogService activityLogService;
     
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
     @Autowired
-    public DocumentService(DocumentRepository documentRepository, CaseRepository caseRepository) {
+    public DocumentService(DocumentRepository documentRepository, CaseRepository caseRepository, ActivityLogService activityLogService) {
         this.documentRepository = documentRepository;
         this.caseRepository = caseRepository;
+        this.activityLogService = activityLogService;
     }
 
     /**
@@ -138,6 +142,20 @@ public class DocumentService {
         Document savedDocument = documentRepository.save(document);
         Document documentWithDetails = documentRepository.findByIdWithCaseDetails(savedDocument.getId())
                 .orElse(savedDocument);
+
+        // Log activity
+        String clientName = legalCase.getClient() != null ? 
+            legalCase.getClient().getFirstName() + " " + legalCase.getClient().getLastName() : "Bilinmeyen Müvekkil";
+        
+        activityLogService.logDocumentCreated(
+            savedDocument.getId(),
+            savedDocument.getTitle(),
+            legalCase.getId(),
+            legalCase.getTitle(),
+            legalCase.getClient() != null ? legalCase.getClient().getId() : 0L,
+            clientName
+        );
+
         return new DocumentDTO(documentWithDetails);
     }
 

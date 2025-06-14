@@ -61,7 +61,7 @@ public class DatabaseSchemaTest {
         document.setTitle("Test Document");
         document.setFileName("test.pdf");
         document.setContentType("application/pdf");
-        document.setFileSize(1024);
+        document.setFileSize(1024L);
         document.setDescription("Test document description");
         document.setLegalCase(savedCase);
         document.setType(Document.DocumentType.COMPLAINT);

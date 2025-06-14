@@ -22,4 +22,7 @@ databaseChangeLog:
       relativeToChangelogFile: false
   - include:
       file: db/changelog/v1.2/04-update-documents-table-structure.sql
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/v1.3/01-create-activity-logs-table.sql
       relativeToChangelogFile: false 
