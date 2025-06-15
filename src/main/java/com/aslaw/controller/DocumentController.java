@@ -5,12 +5,15 @@ import com.aslaw.entity.Case;
 import com.aslaw.entity.Document;
 import com.aslaw.repository.CaseRepository;
 import com.aslaw.service.DocumentService;
+import com.infracore.entity.User;
+import com.infracore.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,6 +32,9 @@ public class DocumentController {
 
     @Autowired
     private CaseRepository caseRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     /**
      * Get all documents
@@ -56,6 +62,27 @@ public class DocumentController {
     public ResponseEntity<List<DocumentDTO>> getDocumentsByCaseId(@PathVariable Long caseId) {
         List<DocumentDTO> documents = documentService.getDocumentsByCaseId(caseId);
         return ResponseEntity.ok(documents);
+    }
+
+    /**
+     * Get current client's own documents (from all their cases)
+     */
+    @GetMapping("/my-documents")
+    @PreAuthorize("hasRole('CLIENT') or hasRole('USER')")
+    public ResponseEntity<List<DocumentDTO>> getMyOwnDocuments() {
+        try {
+            // Get current user from security context
+            String currentUsername = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+            
+            User currentUser = userRepository.findByUsername(currentUsername)
+                    .orElseThrow(() -> new RuntimeException("Current user not found"));
+            
+            List<DocumentDTO> documents = documentService.getDocumentsByClientId(currentUser.getId());
+            return ResponseEntity.ok(documents);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     /**

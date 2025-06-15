@@ -47,4 +47,10 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
      */
     @Query("SELECT d FROM Document d LEFT JOIN FETCH d.legalCase WHERE d.id = :id")
     Optional<Document> findByIdWithCaseDetails(@Param("id") Long id);
+    
+    /**
+     * Find documents by client ID (from all client's cases)
+     */
+    @Query("SELECT d FROM Document d LEFT JOIN FETCH d.legalCase c WHERE c.client.id = :clientId ORDER BY d.createdDate DESC")
+    List<Document> findByClientId(@Param("clientId") Long clientId);
 }

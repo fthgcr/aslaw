@@ -57,9 +57,10 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<List<UserDTO>> getAllLawyers() {
         try {
-            List<UserDTO> lawyers = userService.getAllLawyers();
-            System.out.println("Lawyers found using new method: " + lawyers.size());
-            return ResponseEntity.ok(lawyers);
+            // Sadece aktif avukatları getir
+            List<UserDTO> activeLawyers = userService.getActiveLawyers();
+            System.out.println("Active lawyers found: " + activeLawyers.size());
+            return ResponseEntity.ok(activeLawyers);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -278,6 +279,34 @@ public class AdminController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to delete user: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Deactivate user (soft delete)
+     */
+    @PatchMapping("/users/{id}/deactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deactivateUser(@PathVariable Long id) {
+        try {
+            User user = userService.findByIdEntity(id)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            user.setActive(false);
+            user.setUpdatedDate(LocalDateTime.now());
+            
+            userService.saveUser(user);
+            
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "User deactivated successfully"
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to deactivate user: " + e.getMessage()));
         }
     }
 

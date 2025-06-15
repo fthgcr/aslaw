@@ -76,6 +76,17 @@ public class DocumentService {
     }
 
     /**
+     * Get documents by client ID (from all client's cases)
+     */
+    @Transactional(readOnly = true)
+    public List<DocumentDTO> getDocumentsByClientId(Long clientId) {
+        List<Document> documents = documentRepository.findByClientId(clientId);
+        return documents.stream()
+                .map(DocumentDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Get documents by type
      */
     @Transactional(readOnly = true)

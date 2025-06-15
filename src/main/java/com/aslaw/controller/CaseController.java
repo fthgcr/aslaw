@@ -63,13 +63,34 @@ public class CaseController {
     }
 
     /**
-     * Get cases by client ID
+     * Get cases by client ID (Admin/Lawyer access)
      */
     @GetMapping("/client/{clientId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<List<Case>> getCasesByClientId(@PathVariable Long clientId) {
         try {
             List<Case> cases = caseService.getCasesByClientId(clientId);
+            return ResponseEntity.ok(cases);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get current client's own cases (Client access)
+     */
+    @GetMapping("/my-cases")
+    @PreAuthorize("hasRole('CLIENT') or hasRole('USER')")
+    public ResponseEntity<List<Case>> getMyOwnCases() {
+        try {
+            // Get current user from security context
+            String currentUsername = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+            
+            User currentUser = userRepository.findByUsername(currentUsername)
+                    .orElseThrow(() -> new RuntimeException("Current user not found"));
+            
+            List<Case> cases = caseService.getCasesByClientId(currentUser.getId());
             return ResponseEntity.ok(cases);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
