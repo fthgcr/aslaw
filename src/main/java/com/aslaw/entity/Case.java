@@ -32,13 +32,13 @@ public class Case extends BaseEntity {
     @Column(nullable = false)
     private LocalDate filingDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "assigned_user_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "roles", "version", 
                           "createdDate", "lastModifiedDate", "createdBy", "lastModifiedBy", "deleted"})
     private User assignedUser;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "client_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "roles", "version",
                           "createdDate", "lastModifiedDate", "createdBy", "lastModifiedBy", "deleted"})
