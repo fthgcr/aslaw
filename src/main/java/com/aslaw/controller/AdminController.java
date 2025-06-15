@@ -222,13 +222,36 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest request) {
         try {
-            UserDTO updatedUser = userService.updateUser(id, request.toUserDTO())
+            // Find existing user
+            User existingUser = userService.findByIdEntity(id)
                     .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Update basic fields
+            existingUser.setUsername(request.getUsername());
+            existingUser.setEmail(request.getEmail());
+            existingUser.setFirstName(request.getFirstName());
+            existingUser.setLastName(request.getLastName());
+            existingUser.setPhoneNumber(request.getPhoneNumber());
+            existingUser.setAddress(request.getAddress());
+            existingUser.setUpdatedDate(LocalDateTime.now());
+
+            // Update password only if provided
+            if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+                System.out.println("AdminController: Updating password for user: " + existingUser.getUsername());
+                System.out.println("AdminController: New password received: " + request.getPassword());
+                existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
+                System.out.println("AdminController: Password encoded and set successfully");
+            } else {
+                System.out.println("AdminController: No password provided for update, skipping password change");
+            }
+
+            User savedUser = userService.saveUser(existingUser);
+            UserDTO userDTO = UserDTO.fromEntity(savedUser);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "User updated successfully",
-                    "user", updatedUser
+                    "user", userDTO
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -311,6 +334,7 @@ public class AdminController {
 
     public static class UpdateUserRequest {
         private String username;
+        private String password; // Şifre alanı eklendi
         private String email;
         private String firstName;
         private String lastName;
@@ -329,6 +353,9 @@ public class AdminController {
         // Getters and setters
         public String getUsername() { return username; }
         public void setUsername(String username) { this.username = username; }
+        
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
         
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }

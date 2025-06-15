@@ -179,10 +179,18 @@ public class ClientService {
 
         // Update password only if provided
         if (clientDetails.getPassword() != null && !clientDetails.getPassword().trim().isEmpty()) {
+            System.out.println("ClientService: Updating password for user: " + existingClient.getUsername());
+            System.out.println("ClientService: New password received: " + clientDetails.getPassword());
             existingClient.setPassword(passwordEncoder.encode(clientDetails.getPassword()));
+            System.out.println("ClientService: Password encoded and set successfully");
+        } else {
+            System.out.println("ClientService: No password provided for update, skipping password change");
         }
 
-        return userRepository.save(existingClient);
+        User savedClient = userRepository.save(existingClient);
+        System.out.println("ClientService: Client saved successfully. Password hash starts with: " + 
+            (savedClient.getPassword() != null ? savedClient.getPassword().substring(0, Math.min(10, savedClient.getPassword().length())) + "..." : "null"));
+        return savedClient;
     }
 
     /**

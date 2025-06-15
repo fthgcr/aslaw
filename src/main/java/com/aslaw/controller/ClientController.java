@@ -125,17 +125,85 @@ public class ClientController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateClient(@PathVariable Long id, @Valid @RequestBody User clientDetails) {
+    public ResponseEntity<?> updateClient(@PathVariable Long id, @RequestBody UpdateClientRequest request) {
         try {
+            System.out.println("ClientController: updateClient called for ID: " + id);
+            System.out.println("ClientController: Username: " + request.getUsername());
+            System.out.println("ClientController: Email: " + request.getEmail());
+            System.out.println("ClientController: Password provided: " + (request.getPassword() != null ? "YES (length: " + request.getPassword().length() + ")" : "NO"));
+            
+            // Convert DTO to User entity
+            User clientDetails = new User();
+            clientDetails.setUsername(request.getUsername());
+            clientDetails.setEmail(request.getEmail());
+            clientDetails.setFirstName(request.getFirstName());
+            clientDetails.setLastName(request.getLastName());
+            clientDetails.setPhoneNumber(request.getPhoneNumber());
+            clientDetails.setAddress(request.getAddress());
+            clientDetails.setNotes(request.getNotes());
+            clientDetails.setEnabled(request.isEnabled());
+            clientDetails.setActive(request.isActive());
+            clientDetails.setPassword(request.getPassword()); // Şifre alanını set et
+            
             User updatedClient = clientService.updateClient(id, clientDetails);
+            
+            System.out.println("ClientController: Client updated successfully");
             return ResponseEntity.ok(updatedClient);
         } catch (IllegalArgumentException e) {
+            System.out.println("ClientController: Validation error: " + e.getMessage());
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
+            System.out.println("ClientController: Unexpected error: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Müvekkil güncellenirken bir hata oluştu"));
         }
+    }
+
+    // DTO for client update requests
+    public static class UpdateClientRequest {
+        private String username;
+        private String password;
+        private String email;
+        private String firstName;
+        private String lastName;
+        private String phoneNumber;
+        private String address;
+        private String notes;
+        private boolean enabled;
+        private boolean active;
+
+        // Getters and setters
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+        
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+        
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        
+        public String getFirstName() { return firstName; }
+        public void setFirstName(String firstName) { this.firstName = firstName; }
+        
+        public String getLastName() { return lastName; }
+        public void setLastName(String lastName) { this.lastName = lastName; }
+        
+        public String getPhoneNumber() { return phoneNumber; }
+        public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+        
+        public String getAddress() { return address; }
+        public void setAddress(String address) { this.address = address; }
+        
+        public String getNotes() { return notes; }
+        public void setNotes(String notes) { this.notes = notes; }
+        
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        
+        public boolean isActive() { return active; }
+        public void setActive(boolean active) { this.active = active; }
     }
 
     /**
