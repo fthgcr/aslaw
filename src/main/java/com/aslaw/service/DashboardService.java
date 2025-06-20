@@ -4,6 +4,7 @@ import com.aslaw.entity.Case;
 import com.aslaw.entity.Document;
 import com.aslaw.repository.CaseRepository;
 import com.aslaw.repository.DocumentRepository;
+import com.infracore.dto.UserDTO;
 import com.infracore.entity.ActivityLog;
 import com.infracore.entity.Role;
 import com.infracore.entity.User;
@@ -50,9 +51,9 @@ public class DashboardService {
      */
     @Transactional(readOnly = true)
     public ClientStatusSummary getClientStatusSummary() {
-        // infra-core'daki yeni metodları kullan
-        List<User> allClients = userRepository.findAllClients();
-        List<User> activeClients = userRepository.findActiveClients();
+        // UserService'i kullan
+        List<UserDTO> allClients = userService.getAllClients();
+        List<UserDTO> activeClients = userService.getActiveClients();
 
         long activeCount = activeClients.size();
         long inactiveCount = allClients.size() - activeCount;
@@ -265,29 +266,44 @@ public class DashboardService {
      */
     @Transactional(readOnly = true)
     public DashboardStats getDashboardStats() {
-        // Total clients using new method
-        long totalClients = userService.countUsersByRole(Role.RoleName.USER);
-
-        // This month's new clients
-        YearMonth currentMonth = YearMonth.now();
-        LocalDateTime startOfMonth = currentMonth.atDay(1).atStartOfDay();
-        LocalDateTime endOfMonth = currentMonth.atEndOfMonth().atTime(23, 59, 59);
+        // Active clients (USER role + enabled + active)
+        List<UserDTO> allUserRoleUsers = userService.getAllClients(); // USER rolündeki tüm kullanıcılar
         
-        long monthlyNewClients = userRepository.findAllClients().stream()
-                .filter(user -> user.getCreatedDate() != null 
-                    && user.getCreatedDate().isAfter(startOfMonth) 
-                    && user.getCreatedDate().isBefore(endOfMonth))
+        System.out.println("=== DETAILED USER DEBUG ===");
+        System.out.println("All USER role users:");
+        for (UserDTO user : allUserRoleUsers) {
+            System.out.println("- User: " + user.getFirstName() + " " + user.getLastName() + 
+                " (ID: " + user.getId() + ") - Enabled: " + user.isEnabled() + 
+                ", Active: " + user.isActive() + ", Roles: " + user.getRoles());
+        }
+        
+        long totalClients = allUserRoleUsers.stream()
+                .filter(UserDTO::isActive) // Aktif olanları filtrele
                 .count();
 
-        // Previous month's new clients for comparison
-        YearMonth previousMonth = currentMonth.minusMonths(1);
-        LocalDateTime startOfPreviousMonth = previousMonth.atDay(1).atStartOfDay();
-        LocalDateTime endOfPreviousMonth = previousMonth.atEndOfMonth().atTime(23, 59, 59);
+        System.out.println("Filtered active users:");
+        allUserRoleUsers.stream()
+                .filter(user -> user.isEnabled() && user.isActive())
+                .forEach(user -> System.out.println("- ACTIVE: " + user.getFirstName() + " " + user.getLastName() + 
+                    " (ID: " + user.getId() + ") - Enabled: " + user.isEnabled() + 
+                    ", Active: " + user.isActive()));
+
+        // Last 30 days' new clients (not just this month)
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         
-        long previousMonthNewClients = userRepository.findAllClients().stream()
+        long monthlyNewClients = allUserRoleUsers.stream()
                 .filter(user -> user.getCreatedDate() != null 
-                    && user.getCreatedDate().isAfter(startOfPreviousMonth) 
-                    && user.getCreatedDate().isBefore(endOfPreviousMonth))
+                    && user.getCreatedDate().isAfter(thirtyDaysAgo))
+                .count();
+
+        // Previous 30 days' new clients for comparison (31-60 days ago)
+        LocalDateTime sixtyDaysAgo = LocalDateTime.now().minusDays(60);
+        LocalDateTime thirtyOneDaysAgo = LocalDateTime.now().minusDays(31);
+        
+        long previousMonthNewClients = allUserRoleUsers.stream()
+                .filter(user -> user.getCreatedDate() != null 
+                    && user.getCreatedDate().isAfter(sixtyDaysAgo) 
+                    && user.getCreatedDate().isBefore(thirtyOneDaysAgo))
                 .count();
 
         // Calculate percentage change
@@ -308,6 +324,16 @@ public class DashboardService {
 
         // Total documents
         long totalDocuments = documentRepository.count();
+
+        System.out.println("=== DASHBOARD STATS DEBUG ===");
+        System.out.println("- All USER role users count: " + allUserRoleUsers.size());
+        System.out.println("- Total Active Clients (USER role + enabled + active): " + totalClients);
+        System.out.println("- Last 30 Days New Clients: " + monthlyNewClients);
+        System.out.println("- Previous 30 Days New Clients: " + previousMonthNewClients);
+        System.out.println("- Client Growth Percentage: " + clientGrowthPercentage + "%");
+        System.out.println("- Total Cases: " + totalCases);
+        System.out.println("- Active Cases: " + activeCases);
+        System.out.println("==============================");
 
         return new DashboardStats(
                 totalClients,

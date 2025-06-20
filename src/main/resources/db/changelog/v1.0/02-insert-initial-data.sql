@@ -1,12 +1,15 @@
 --liquibase formatted sql
 
 --changeset liquibase:2 splitStatements:false runOnChange:false
--- Insert default roles
+-- Insert default roles (Generic roles for infra-core)
 INSERT INTO roles (name, description, created_date, updated_date, is_active) 
 VALUES 
 ('ADMIN', 'Administrator role with full access', NOW(), NOW(), TRUE),
 ('USER', 'Standard user role', NOW(), NOW(), TRUE),
-('LAWYER', 'Lawyer role with legal access', NOW(), NOW(), TRUE)
+('MANAGER', 'Manager role with supervisory access', NOW(), NOW(), TRUE),
+('EMPLOYEE', 'Employee role for staff members', NOW(), NOW(), TRUE),
+('CLIENT', 'Client role for external users', NOW(), NOW(), TRUE),
+('GUEST', 'Guest role with limited access', NOW(), NOW(), TRUE)
 ON CONFLICT (name) DO NOTHING;
 
 -- Insert default admin user

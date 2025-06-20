@@ -6,6 +6,9 @@ databaseChangeLog:
       file: db/changelog/v1.0/02-insert-initial-data.sql
       relativeToChangelogFile: false
   - include:
+      file: db/changelog/v1.0/03-add-law-roles.sql
+      relativeToChangelogFile: false
+  - include:
       file: db/changelog/v1.1/01-create-cases-table.sql
       relativeToChangelogFile: false
   - include:

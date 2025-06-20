@@ -34,7 +34,7 @@ app:
       expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
 
 server:
-  port: 8080
+  port: 8081
 
 logging:
   level:

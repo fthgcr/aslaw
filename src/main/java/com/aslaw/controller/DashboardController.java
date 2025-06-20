@@ -23,7 +23,7 @@ public class DashboardController {
      * Get dashboard statistics
      */
     @GetMapping("/stats")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<DashboardService.DashboardStats> getDashboardStats() {
         try {
             DashboardService.DashboardStats stats = dashboardService.getDashboardStats();
@@ -39,7 +39,7 @@ public class DashboardController {
      * Get client status summary
      */
     @GetMapping("/client-status")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<DashboardService.ClientStatusSummary> getClientStatusSummary() {
         try {
             DashboardService.ClientStatusSummary summary = dashboardService.getClientStatusSummary();
@@ -55,7 +55,7 @@ public class DashboardController {
      * Get case types distribution
      */
     @GetMapping("/case-types")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<java.util.List<DashboardService.CaseTypeDistribution>> getCaseTypesDistribution() {
         try {
             java.util.List<DashboardService.CaseTypeDistribution> distribution = dashboardService.getCaseTypesDistribution();
@@ -71,7 +71,7 @@ public class DashboardController {
      * Get case status distribution
      */
     @GetMapping("/case-status")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<java.util.List<DashboardService.CaseStatusDistribution>> getCaseStatusDistribution() {
         try {
             java.util.List<DashboardService.CaseStatusDistribution> distribution = dashboardService.getCaseStatusDistribution();
@@ -84,7 +84,7 @@ public class DashboardController {
     }
 
     @GetMapping("/recent-activities")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<java.util.List<DashboardService.RecentActivity>> getRecentActivities() {
         try {
             java.util.List<DashboardService.RecentActivity> activities = dashboardService.getRecentActivities();

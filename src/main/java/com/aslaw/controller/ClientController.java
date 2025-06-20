@@ -33,7 +33,7 @@ public class ClientController {
      * Get all clients with optional filtering
      */
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<List<User>> getAllClients(
             @RequestParam(required = false) String firstName,
             @RequestParam(required = false) String lastName,
@@ -63,7 +63,7 @@ public class ClientController {
      * Get clients with pagination
      */
     @GetMapping("/paginated")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<Page<User>> getClientsPaginated(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -86,7 +86,7 @@ public class ClientController {
      * Get client by ID
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<User> getClientById(@PathVariable Long id) {
         try {
             return clientService.getClientById(id)
@@ -101,7 +101,7 @@ public class ClientController {
      * Create new client
      */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<?> createClient(@RequestBody User client) {
         try {
             System.out.println("ClientController: createClient called with: " + client.getUsername());
@@ -124,7 +124,7 @@ public class ClientController {
      * Update existing client
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<?> updateClient(@PathVariable Long id, @RequestBody UpdateClientRequest request) {
         try {
             System.out.println("ClientController: updateClient called for ID: " + id);
@@ -229,7 +229,7 @@ public class ClientController {
      * Toggle client status (enable/disable)
      */
     @PatchMapping("/{id}/toggle-status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<?> toggleClientStatus(@PathVariable Long id) {
         try {
             User updatedClient = clientService.toggleClientStatus(id);
@@ -252,7 +252,7 @@ public class ClientController {
      * Search clients
      */
     @GetMapping("/search")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<List<User>> searchClients(@RequestParam String q) {
         try {
             List<User> clients = clientService.searchClients(q);
@@ -266,7 +266,7 @@ public class ClientController {
      * Get client statistics
      */
     @GetMapping("/stats")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<ClientService.ClientStats> getClientStats() {
         try {
             ClientService.ClientStats stats = clientService.getClientStats();

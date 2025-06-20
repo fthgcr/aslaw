@@ -40,6 +40,7 @@ public class DocumentController {
      * Get all documents
      */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<List<DocumentDTO>> getAllDocuments() {
         List<DocumentDTO> documents = documentService.getAllDocuments();
         return ResponseEntity.ok(documents);
@@ -49,6 +50,7 @@ public class DocumentController {
      * Get document by ID
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<Document> getDocumentById(@PathVariable Long id) {
         Optional<Document> document = documentService.getDocumentById(id);
         return document.map(ResponseEntity::ok)
@@ -59,6 +61,7 @@ public class DocumentController {
      * Get documents by case ID
      */
     @GetMapping("/case/{caseId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<List<DocumentDTO>> getDocumentsByCaseId(@PathVariable Long caseId) {
         List<DocumentDTO> documents = documentService.getDocumentsByCaseId(caseId);
         return ResponseEntity.ok(documents);
@@ -89,6 +92,7 @@ public class DocumentController {
      * Upload document
      */
     @PostMapping("/upload")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<?> uploadDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
@@ -115,6 +119,7 @@ public class DocumentController {
      * Create document (without file upload)
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<?> createDocument(@RequestBody DocumentCreateRequest request) {
         try {
             // Validate case exists
@@ -139,6 +144,7 @@ public class DocumentController {
      * Update document
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<?> updateDocument(@PathVariable Long id, @RequestBody DocumentUpdateRequest request) {
         try {
             Document updatedDocument = new Document();
@@ -164,6 +170,7 @@ public class DocumentController {
      * Delete document
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteDocument(@PathVariable Long id) {
         try {
             documentService.deleteDocument(id);
@@ -178,6 +185,7 @@ public class DocumentController {
      * Download document
      */
     @GetMapping("/{id}/download")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<Resource> downloadDocument(@PathVariable Long id) {
         try {
             Optional<Document> documentOpt = documentService.getDocumentById(id);
@@ -204,6 +212,7 @@ public class DocumentController {
      * Search documents by title
      */
     @GetMapping("/search/title")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<List<DocumentDTO>> searchByTitle(@RequestParam String title) {
         List<DocumentDTO> documents = documentService.searchDocumentsByTitle(title);
         return ResponseEntity.ok(documents);
@@ -213,6 +222,7 @@ public class DocumentController {
      * Search documents by file name
      */
     @GetMapping("/search/filename")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<List<DocumentDTO>> searchByFileName(@RequestParam String fileName) {
         List<DocumentDTO> documents = documentService.searchDocumentsByFileName(fileName);
         return ResponseEntity.ok(documents);

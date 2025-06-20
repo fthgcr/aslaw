@@ -38,7 +38,7 @@ public class CaseController {
      * Get all cases sorted by creation date in descending order
      */
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<List<Case>> getAllCases() {
         try {
             List<Case> cases = caseService.getAllCasesSortedByCreationDate();
@@ -52,7 +52,7 @@ public class CaseController {
      * Get cases by user ID
      */
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<List<Case>> getCasesByUserId(@PathVariable Long userId) {
         try {
             List<Case> cases = caseService.getCasesByUserId(userId);
@@ -63,10 +63,10 @@ public class CaseController {
     }
 
     /**
-     * Get cases by client ID (Admin/Lawyer access)
+     * Get cases by client ID (Admin/Lawyer/Clerk access)
      */
     @GetMapping("/client/{clientId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<List<Case>> getCasesByClientId(@PathVariable Long clientId) {
         try {
             List<Case> cases = caseService.getCasesByClientId(clientId);
@@ -101,7 +101,7 @@ public class CaseController {
      * Get cases by status
      */
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<List<Case>> getCasesByStatus(@PathVariable Case.CaseStatus status) {
         try {
             List<Case> cases = caseService.getCasesByStatus(status);
@@ -115,7 +115,7 @@ public class CaseController {
      * Get cases with pagination and sorting
      */
     @GetMapping("/paginated")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<Page<Case>> getCasesPaginated(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -138,7 +138,7 @@ public class CaseController {
      * Get case by ID
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<Case> getCaseById(@PathVariable Long id) {
         try {
             System.out.println("CaseController: getCaseById called with id: " + id);
@@ -159,7 +159,7 @@ public class CaseController {
      * Create new case
      */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<?> createCase(@Valid @RequestBody CaseCreateRequest request) {
         try {
             Case caseEntity = new Case();
@@ -199,7 +199,7 @@ public class CaseController {
      * Update existing case
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<?> updateCase(@PathVariable Long id, @Valid @RequestBody CaseCreateRequest request) {
         try {
             Case caseDetails = new Case();
@@ -239,7 +239,7 @@ public class CaseController {
      * Delete case
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteCase(@PathVariable Long id) {
         try {
             caseService.deleteCase(id);
@@ -282,7 +282,7 @@ public class CaseController {
      * Generate case number
      */
     @GetMapping("/generate-number")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
     public ResponseEntity<Map<String, String>> generateCaseNumber() {
         try {
             String caseNumber = caseService.generateCaseNumber();
