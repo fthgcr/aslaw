@@ -2,6 +2,10 @@
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
+# Build arguments for GitHub authentication
+ARG GITHUB_USERNAME
+ARG GITHUB_TOKEN
+
 # Copy pom.xml and source code
 COPY pom.xml .
 COPY src ./src
@@ -15,11 +19,16 @@ RUN mkdir -p /root/.m2 && \
     echo '  <servers>' >> /root/.m2/settings.xml && \
     echo '    <server>' >> /root/.m2/settings.xml && \
     echo '      <id>github</id>' >> /root/.m2/settings.xml && \
-    echo '      <username>${GITHUB_USERNAME}</username>' >> /root/.m2/settings.xml && \
-    echo '      <password>${GITHUB_TOKEN}</password>' >> /root/.m2/settings.xml && \
+    echo '      <username>'$GITHUB_USERNAME'</username>' >> /root/.m2/settings.xml && \
+    echo '      <password>'$GITHUB_TOKEN'</password>' >> /root/.m2/settings.xml && \
     echo '    </server>' >> /root/.m2/settings.xml && \
     echo '  </servers>' >> /root/.m2/settings.xml && \
     echo '</settings>' >> /root/.m2/settings.xml
+
+# Debug: Show settings.xml and environment
+RUN echo "=== DEBUG: GitHub Username ===" && echo $GITHUB_USERNAME && \
+    echo "=== DEBUG: Token length ===" && echo ${#GITHUB_TOKEN} && \
+    echo "=== DEBUG: Maven settings.xml ===" && cat /root/.m2/settings.xml
 
 # Build application
 RUN mvn clean package -DskipTests
