@@ -37,6 +37,9 @@ public class Document {
     @Column(nullable = false)
     private String filePath;
     
+    @Column(name = "public_url")
+    private String publicUrl;
+    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DocumentType type;
@@ -85,6 +88,9 @@ public class Document {
 
     public String getFilePath() { return filePath; }
     public void setFilePath(String filePath) { this.filePath = filePath; }
+
+    public String getPublicUrl() { return publicUrl; }
+    public void setPublicUrl(String publicUrl) { this.publicUrl = publicUrl; }
 
     public DocumentType getType() { return type; }
     public void setType(DocumentType type) { this.type = type; }

@@ -7,6 +7,8 @@ import com.aslaw.repository.CaseRepository;
 import com.aslaw.repository.DocumentRepository;
 import com.infracore.entity.ActivityLog;
 import com.infracore.service.ActivityLogService;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -24,6 +26,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -34,15 +37,21 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
     private final CaseRepository caseRepository;
     private final ActivityLogService activityLogService;
+    private final Cloudinary cloudinary;
     
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
+    
+    @Value("${app.upload.provider:local}")
+    private String uploadProvider;
 
     @Autowired
-    public DocumentService(DocumentRepository documentRepository, CaseRepository caseRepository, ActivityLogService activityLogService) {
+    public DocumentService(DocumentRepository documentRepository, CaseRepository caseRepository, 
+                          ActivityLogService activityLogService, Cloudinary cloudinary) {
         this.documentRepository = documentRepository;
         this.caseRepository = caseRepository;
         this.activityLogService = activityLogService;
+        this.cloudinary = cloudinary;
     }
 
     /**
@@ -120,34 +129,56 @@ public class DocumentService {
             throw new IllegalArgumentException("Dosya boş olamaz");
         }
 
-        // Generate unique filename
-        String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
-        String fileExtension = "";
-        if (originalFileName.contains(".")) {
-            fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
-        }
-        String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
+        String filePath;
+        String publicUrl = null;
+        
+        if ("cloudinary".equals(uploadProvider)) {
+            // Upload to Cloudinary
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), 
+                ObjectUtils.asMap(
+                    "resource_type", "auto",
+                    "folder", "aslaw-documents",
+                    "public_id", UUID.randomUUID().toString()
+                ));
+            
+            publicUrl = (String) uploadResult.get("secure_url");
+            filePath = (String) uploadResult.get("public_id");
+        } else {
+            // Local file storage (development)
+            String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
+            String fileExtension = "";
+            if (originalFileName.contains(".")) {
+                fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+            }
+            String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
 
-        // Create upload directory if it doesn't exist
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
+            // Create upload directory if it doesn't exist
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
 
-        // Save file to disk
-        Path filePath = uploadPath.resolve(uniqueFileName);
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            // Save file to disk
+            Path localFilePath = uploadPath.resolve(uniqueFileName);
+            Files.copy(file.getInputStream(), localFilePath, StandardCopyOption.REPLACE_EXISTING);
+            filePath = localFilePath.toString();
+        }
 
         // Create document entity
         Document document = new Document();
         document.setTitle(title);
         document.setDescription(description);
-        document.setFileName(originalFileName);
-        document.setFilePath(filePath.toString());
+        document.setFileName(StringUtils.cleanPath(file.getOriginalFilename()));
+        document.setFilePath(filePath);
         document.setContentType(file.getContentType());
         document.setFileSize(file.getSize());
         document.setType(type);
         document.setLegalCase(legalCase);
+        
+        // Set public URL if using cloud storage
+        if (publicUrl != null) {
+            document.setPublicUrl(publicUrl);
+        }
 
         // Save and return as DTO
         Document savedDocument = documentRepository.save(document);

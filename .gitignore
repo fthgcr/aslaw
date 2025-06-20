@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local uploads (development only) ###
+uploads/
+uploads/*

@@ -1,0 +1,12 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/actuator/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+
+# Persistent volume for file uploads
+[[deploy.volumes]]
+mountPath = "/app/uploads"
+name = "aslaw-uploads" 

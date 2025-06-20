@@ -11,6 +11,7 @@ public class DocumentDTO {
     private Long fileSize;
     private String description;
     private Document.DocumentType type;
+    private String publicUrl;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
     
@@ -38,6 +39,7 @@ public class DocumentDTO {
         this.fileSize = document.getFileSize();
         this.description = document.getDescription();
         this.type = document.getType();
+        this.publicUrl = document.getPublicUrl();
         this.createdDate = document.getCreatedDate();
         this.updatedDate = document.getUpdatedDate();
         
@@ -81,6 +83,9 @@ public class DocumentDTO {
 
     public Document.DocumentType getType() { return type; }
     public void setType(Document.DocumentType type) { this.type = type; }
+
+    public String getPublicUrl() { return publicUrl; }
+    public void setPublicUrl(String publicUrl) { this.publicUrl = publicUrl; }
 
     public LocalDateTime getCreatedDate() { return createdDate; }
     public void setCreatedDate(LocalDateTime createdDate) { this.createdDate = createdDate; }

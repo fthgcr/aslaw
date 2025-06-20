@@ -31,12 +31,21 @@
 		<mapstruct.version>1.5.5.Final</mapstruct.version>
 		<springdoc.version>2.3.0</springdoc.version>
 	</properties>
+
+	<!-- GitHub Packages Repository -->
+	<repositories>
+		<repository>
+			<id>github</id>
+			<url>https://maven.pkg.github.com/fthgcr/infra-core</url>
+		</repository>
+	</repositories>
+
 	<dependencies>
 		<!-- Internal Dependencies -->
 		<dependency>
-			<groupId>org.infra-core</groupId>
+			<groupId>com.fthgcr</groupId>
 			<artifactId>infra-core</artifactId>
-			<version>0.0.47-SNAPSHOT</version>
+			<version>0.0.68-SNAPSHOT</version>
 		</dependency>
 
 		<!-- Spring Boot Dependencies -->
@@ -64,6 +73,20 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>${springdoc.version}</version>
+		</dependency>
+
+		<!-- Cloudinary for file storage -->
+		<dependency>
+			<groupId>com.cloudinary</groupId>
+			<artifactId>cloudinary-http44</artifactId>
+			<version>1.34.0</version>
+		</dependency>
+
+		<!-- Supabase Storage (Alternative free option) -->
+		<dependency>
+			<groupId>io.supabase</groupId>
+			<artifactId>storage-java</artifactId>
+			<version>1.5.1</version>
 		</dependency>
 
 		<!-- MapStruct -->
