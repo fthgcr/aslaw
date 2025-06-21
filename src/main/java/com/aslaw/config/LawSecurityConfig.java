@@ -4,7 +4,6 @@ import com.aslaw.security.LawUserDetailsService;
 import com.infracore.security.JwtAuthenticationFilter;
 import com.infracore.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -32,9 +31,6 @@ import java.util.Arrays;
 public class LawSecurityConfig {
 
     private final LawUserDetailsService lawUserDetailsService;
-    
-    @Value("${server.servlet.context-path:}")
-    private String contextPath;
 
     @Bean
     @Primary
@@ -66,48 +62,6 @@ public class LawSecurityConfig {
             HttpSecurity http, 
             JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         
-        // Context path'e göre matcher'ları ayarla
-        final String authPattern;
-        final String lawAuthPattern;
-        final String publicPattern;
-        final String swaggerPattern;
-        final String apiDocsPattern;
-        final String actuatorPattern;
-        final String clientsPattern;
-        final String casesPattern;
-        final String adminPattern;
-        final String dashboardPattern;
-        final String documentsPattern;
-        
-        // Railway'de context-path /api olduğu için pattern'ları ayarla
-        if (contextPath != null && contextPath.equals("/api")) {
-            // Railway'de context path /api olduğu için, endpoint'ler /api prefix'i olmadan
-            authPattern = "/auth/**";
-            lawAuthPattern = "/law/auth/**";
-            publicPattern = "/public/**";
-            swaggerPattern = "/swagger-ui/**";
-            apiDocsPattern = "/api-docs/**";
-            actuatorPattern = "/actuator/**";
-            clientsPattern = "/clients/**";
-            casesPattern = "/cases/**";
-            adminPattern = "/admin/**";
-            dashboardPattern = "/dashboard/**";
-            documentsPattern = "/documents/**";
-        } else {
-            // Local development için
-            authPattern = "/api/auth/**";
-            lawAuthPattern = "/api/law/auth/**";
-            publicPattern = "/public/**";
-            swaggerPattern = "/swagger-ui/**";
-            apiDocsPattern = "/api-docs/**";
-            actuatorPattern = "/actuator/**";
-            clientsPattern = "/api/clients/**";
-            casesPattern = "/api/cases/**";
-            adminPattern = "/api/admin/**";
-            dashboardPattern = "/api/dashboard/**";
-            documentsPattern = "/api/documents/**";
-        }
-        
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
@@ -115,20 +69,14 @@ public class LawSecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("OPTIONS", "/**").permitAll()
-                .requestMatchers(authPattern).permitAll()
-                .requestMatchers(lawAuthPattern).permitAll()
-                .requestMatchers(publicPattern).permitAll()
-                .requestMatchers(swaggerPattern, apiDocsPattern).permitAll()
-                .requestMatchers(actuatorPattern).permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/law/auth/**").permitAll()
+                .requestMatchers("/public/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/health/**").permitAll()
                 .requestMatchers("/test/**").permitAll()
                 .requestMatchers("/**/test").permitAll()
-                // API endpoint'leri için authentication gerekli
-                .requestMatchers(clientsPattern).authenticated()
-                .requestMatchers(casesPattern).authenticated()
-                .requestMatchers(adminPattern).authenticated()
-                .requestMatchers(dashboardPattern).authenticated()
-                .requestMatchers(documentsPattern).authenticated()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

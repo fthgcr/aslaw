@@ -29,16 +29,14 @@ spring:
 
   web:
     resources:
-      add-mappings: false
+      add-mappings: true
       
   mvc:
-    throw-exception-if-no-handler-found: true
+    throw-exception-if-no-handler-found: false
 
 # Server configuration
 server:
   port: ${PORT:8080}
-  servlet:
-    context-path: /api
 
 # JWT Configuration
 app:
@@ -50,10 +48,10 @@ app:
 # Logging configuration
 logging:
   level:
-    com.aslaw: DEBUG
-    com.infracore: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.web: DEBUG
+    com.aslaw: INFO
+    com.infracore: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
     org.hibernate.SQL: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: WARN
     com.zaxxer.hikari: DEBUG
