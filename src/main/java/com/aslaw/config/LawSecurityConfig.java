@@ -6,14 +6,10 @@ import com.infracore.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -31,11 +27,6 @@ public class LawSecurityConfig {
     private final LawUserDetailsService lawUserDetailsService;
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
         return new JwtAuthenticationFilter(jwtTokenProvider, lawUserDetailsService);
     }
@@ -43,8 +34,7 @@ public class LawSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http, 
-            JwtAuthenticationFilter jwtAuthenticationFilter,
-            AuthenticationManager authenticationManager) throws Exception {
+            JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         
         return http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -82,7 +72,6 @@ public class LawSecurityConfig {
                 // All other requests need authentication
                 .anyRequest().authenticated()
             )
-            .authenticationManager(authenticationManager)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .build();
     }
