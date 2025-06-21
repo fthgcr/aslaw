@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/law/auth")
+@RequestMapping("/law/auth")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 public class LawAuthController {

@@ -5,7 +5,6 @@ import com.aslaw.service.CaseService;
 import com.infracore.entity.User;
 import com.infracore.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,18 +20,13 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/cases")
-@CrossOrigin(origins = "http://localhost:4200")
+@RequestMapping("/cases")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class CaseController {
 
     private final CaseService caseService;
     private final UserRepository userRepository;
-
-    @Autowired
-    public CaseController(CaseService caseService, UserRepository userRepository) {
-        this.caseService = caseService;
-        this.userRepository = userRepository;
-    }
 
     /**
      * Get all cases sorted by creation date in descending order

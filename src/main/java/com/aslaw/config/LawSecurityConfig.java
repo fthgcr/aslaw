@@ -66,9 +66,9 @@ public class LawSecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/law/auth/**").permitAll()
+                // Public endpoints - Railway /api prefix ekliyor
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/law/auth/**").permitAll()
                 .requestMatchers("/public/**").permitAll()
                 
                 // Documentation
@@ -81,7 +81,12 @@ public class LawSecurityConfig {
                 
                 // Railway routing test endpoints
                 .requestMatchers("/clients").permitAll()
-                .requestMatchers("/api/clients").permitAll()
+                .requestMatchers("/cases").permitAll()
+                .requestMatchers("/admin").permitAll()
+                .requestMatchers("/dashboard").permitAll()
+                .requestMatchers("/documents").permitAll()
+                .requestMatchers("/roles").permitAll()
+                .requestMatchers("/user").permitAll()
                 
                 // Static resources
                 .requestMatchers("/static/**", "/css/**", "/js/**", "/images/**").permitAll()

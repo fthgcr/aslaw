@@ -3,7 +3,6 @@ package com.aslaw.controller;
 import com.aslaw.service.ClientService;
 import com.infracore.entity.User;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,16 +17,12 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/clients")
-@CrossOrigin(origins = "http://localhost:4200")
+@RequestMapping("/clients")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class ClientController {
 
     private final ClientService clientService;
-
-    @Autowired
-    public ClientController(ClientService clientService) {
-        this.clientService = clientService;
-    }
 
     /**
      * Get all clients with optional filtering
