@@ -79,6 +79,10 @@ public class LawSecurityConfig {
                 .requestMatchers("/health/**").permitAll()
                 .requestMatchers("/test/**").permitAll()
                 
+                // Railway routing test endpoints
+                .requestMatchers("/clients").permitAll()
+                .requestMatchers("/api/clients").permitAll()
+                
                 // Static resources
                 .requestMatchers("/static/**", "/css/**", "/js/**", "/images/**").permitAll()
                 
