@@ -19,9 +19,11 @@ spring:
         jdbc:
           time_zone: UTC
 
-# Server configuration - Railway otomatik port assign eder
+# Server configuration - Railway için context path
 server:
   port: ${PORT:8080}
+  servlet:
+    context-path: /api
 
 # JWT Configuration
 app:

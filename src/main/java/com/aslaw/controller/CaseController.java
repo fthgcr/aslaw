@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/cases")
+@RequestMapping("/api/cases")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class CaseController {
