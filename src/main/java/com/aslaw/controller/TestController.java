@@ -1,9 +1,9 @@
 package com.aslaw.controller;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,13 +13,17 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class TestController {
 
+    @Value("${spring.profiles.active:default}")
+    private String activeProfile;
+
     @GetMapping
     public ResponseEntity<Map<String, Object>> testEndpoint() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "OK");
-        response.put("message", "Test endpoint is working");
+        response.put("message", "ASLAW Backend is running successfully");
         response.put("timestamp", LocalDateTime.now());
-        response.put("environment", "Railway");
+        response.put("profile", activeProfile);
+        response.put("version", "2.0.0");
         return ResponseEntity.ok(response);
     }
 
@@ -29,26 +33,26 @@ public class TestController {
         response.put("status", "UP");
         response.put("timestamp", LocalDateTime.now());
         response.put("service", "aslaw-backend");
+        response.put("profile", activeProfile);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/urls")
-    public ResponseEntity<Map<String, Object>> urlMappings(HttpServletRequest request) {
+    @GetMapping("/api-info")
+    public ResponseEntity<Map<String, Object>> apiInfo() {
         Map<String, Object> response = new HashMap<>();
-        response.put("requestURL", request.getRequestURL().toString());
-        response.put("requestURI", request.getRequestURI());
-        response.put("servletPath", request.getServletPath());
-        
-        Map<String, String> correctUrls = new HashMap<>();
-        correctUrls.put("clients", "https://vibrant-dedication-production-125e.up.railway.app/api/clients");
-        correctUrls.put("cases", "https://vibrant-dedication-production-125e.up.railway.app/api/cases");
-        correctUrls.put("admin", "https://vibrant-dedication-production-125e.up.railway.app/api/admin");
-        correctUrls.put("dashboard", "https://vibrant-dedication-production-125e.up.railway.app/api/dashboard");
-        correctUrls.put("auth", "https://vibrant-dedication-production-125e.up.railway.app/api/law/auth/login");
-        
-        response.put("correctApiUrls", correctUrls);
+        response.put("service", "ASLAW - Legal Management System");
+        response.put("profile", activeProfile);
         response.put("timestamp", LocalDateTime.now());
         
+        Map<String, String> endpoints = new HashMap<>();
+        endpoints.put("auth", "/api/law/auth/login");
+        endpoints.put("clients", "/api/clients");
+        endpoints.put("cases", "/api/cases");
+        endpoints.put("admin", "/api/admin");
+        endpoints.put("dashboard", "/api/dashboard");
+        endpoints.put("health", "/actuator/health");
+        
+        response.put("endpoints", endpoints);
         return ResponseEntity.ok(response);
     }
 } 

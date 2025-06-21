@@ -51,8 +51,7 @@ public class LawSecurityConfig {
     }
 
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter(
-            JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
         return new JwtAuthenticationFilter(jwtTokenProvider, lawUserDetailsService);
     }
 
@@ -62,25 +61,35 @@ public class LawSecurityConfig {
             HttpSecurity http, 
             JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         
-        http
+        return http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("OPTIONS", "/**").permitAll()
+                // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/law/auth/**").permitAll()
                 .requestMatchers("/public/**").permitAll()
+                
+                // Documentation
                 .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+                
+                // Health checks
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/health/**").permitAll()
                 .requestMatchers("/test/**").permitAll()
-                .requestMatchers("/**/test").permitAll()
-                .anyRequest().authenticated())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+                
+                // Static resources
+                .requestMatchers("/static/**", "/css/**", "/js/**", "/images/**").permitAll()
+                
+                // OPTIONS requests
+                .requestMatchers("OPTIONS", "/**").permitAll()
+                
+                // All other requests need authentication
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
     }
 
     @Bean

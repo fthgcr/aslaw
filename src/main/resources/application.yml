@@ -1,24 +1,24 @@
 spring:
   application:
-    name: aslaw-backend
+    name: aslaw
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
-    url: jdbc:postgresql://localhost:5432/aslaw
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
+    url: ${DATABASE_URL:jdbc:h2:mem:testdb}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
   jpa:
     hibernate:
-      ddl-auto: none
-    show-sql: true
+      ddl-auto: ${DDL_AUTO:create-drop}
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.H2Dialect}
+        format_sql: false
     open-in-view: false
   liquibase:
-    change-log: classpath:db/changelog/db.changelog-master.yaml
-    enabled: true
-    drop-first: false
+    enabled: false
 
 springdoc:
   api-docs:
@@ -30,15 +30,35 @@ springdoc:
 app:
   security:
     jwt:
-      secret: ${JWT_SECRET:your-secret-key-here-minimum-256-bits-for-security}
-      expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+      secret: ${JWT_SECRET:defaultSecretKeyForDevelopmentOnlyNotForProduction}
+      expiration: 86400000 # 24 hours
 
 server:
-  port: 8081
+  port: ${PORT:8080}
 
 logging:
   level:
-    com.aslaw: DEBUG
-    com.infracore: DEBUG
-    org.springframework.security: INFO
-    liquibase: INFO
+    com.aslaw: INFO
+    com.infracore: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    root: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+
+file:
+  upload:
+    directory: ${UPLOAD_DIR:/tmp/uploads}
+    max-size: 10MB
