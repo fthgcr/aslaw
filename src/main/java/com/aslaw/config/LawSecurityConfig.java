@@ -4,6 +4,7 @@ import com.aslaw.security.LawUserDetailsService;
 import com.infracore.security.JwtAuthenticationFilter;
 import com.infracore.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -31,6 +32,9 @@ import java.util.Arrays;
 public class LawSecurityConfig {
 
     private final LawUserDetailsService lawUserDetailsService;
+    
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
 
     @Bean
     @Primary
@@ -62,6 +66,32 @@ public class LawSecurityConfig {
             HttpSecurity http, 
             JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         
+        // Context path'e göre matcher'ları ayarla
+        final String authPattern;
+        final String lawAuthPattern;
+        final String publicPattern;
+        final String swaggerPattern;
+        final String apiDocsPattern;
+        final String actuatorPattern;
+        
+        // Railway'de context-path /api olduğu için pattern'ları ayarla
+        if (contextPath != null && contextPath.equals("/api")) {
+            authPattern = "/auth/**";
+            lawAuthPattern = "/law/auth/**";
+            publicPattern = "/public/**";
+            swaggerPattern = "/swagger-ui/**";
+            apiDocsPattern = "/api-docs/**";
+            actuatorPattern = "/actuator/**";
+        } else {
+            // Local development için
+            authPattern = "/api/auth/**";
+            lawAuthPattern = "/api/law/auth/**";
+            publicPattern = "/public/**";
+            swaggerPattern = "/swagger-ui/**";
+            apiDocsPattern = "/api-docs/**";
+            actuatorPattern = "/actuator/**";
+        }
+        
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
@@ -69,10 +99,14 @@ public class LawSecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("OPTIONS", "/**").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/law/auth/**").permitAll()
-                .requestMatchers("/public/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+                .requestMatchers(authPattern).permitAll()
+                .requestMatchers(lawAuthPattern).permitAll()
+                .requestMatchers(publicPattern).permitAll()
+                .requestMatchers(swaggerPattern, apiDocsPattern).permitAll()
+                .requestMatchers(actuatorPattern).permitAll()
+                .requestMatchers("/health/**").permitAll()
+                .requestMatchers("/test/**").permitAll()
+                .requestMatchers("/**/test").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

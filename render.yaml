@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: aslaw-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: ""
+    startCommand: ""
+    healthCheckPath: /actuator/health
+    
+    # Docker build arguments (GitHub Packages için)
+    dockerBuildArgs:
+      - key: GITHUB_USERNAME
+        value: fthgcr
+      - key: GITHUB_TOKEN
+        fromEnvVar: GITHUB_TOKEN
+    
+    # Runtime environment variables
+    envVars:
+      # Spring Profile
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+        
+      # Database connection (Render otomatik inject eder)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aslaw-db
+          property: connectionString
+          
+      # Auto-generated secrets
+      - key: JWT_SECRET
+        generateValue: true
+        
+      # File upload configuration
+      - key: UPLOAD_PROVIDER
+        value: local
+      - key: UPLOAD_DIR
+        value: /app/uploads
+        
+      # Build-time secrets (Dashboard'dan manuel ekleyin)
+      - key: GITHUB_TOKEN
+        sync: false
+
+databases:
+  - name: aslaw-db
+    databaseName: aslaw
+    user: aslaw_user
+    plan: free
+    region: frankfurt 

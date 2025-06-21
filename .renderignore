@@ -1,0 +1,38 @@
+# Render deployment için gereksiz dosyalar
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Build artifacts
+target/
+build/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (deployment için gerekli değil)
+README.md
+RAILWAY-DEPLOY-FIX.md
+
+# Railway config (Render kullanıyoruz)
+railway.toml
+
+# Test files
+src/test/
+
+# Local development
+application-local.yml
+application-dev.yml
+
+# Node modules (eğer varsa)
+node_modules/ 

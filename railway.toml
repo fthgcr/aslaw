@@ -1,9 +1,10 @@
 [build]
 builder = "dockerfile"
+dockerfilePath = "Dockerfile.railway"
 buildArgs = ["GITHUB_USERNAME=$GITHUB_USERNAME", "GITHUB_TOKEN=$GITHUB_TOKEN"]
 
 [deploy]
-healthcheckPath = "/actuator/health"
+healthcheckPath = "/api/actuator/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
 
