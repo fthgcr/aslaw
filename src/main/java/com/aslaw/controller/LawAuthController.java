@@ -31,20 +31,30 @@ public class LawAuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getUsername(),
-                        loginRequest.getPassword()
-                )
-        );
+        try {
+            System.out.println("LawAuthController: Login attempt for username: " + loginRequest.getUsername());
+            
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()
+                    )
+            );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        LawUserPrincipal lawUserPrincipal = (LawUserPrincipal) authentication.getPrincipal();
-        String jwt = jwtTokenProvider.generateToken(authentication);
+            System.out.println("LawAuthController: Authentication successful");
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            LawUserPrincipal lawUserPrincipal = (LawUserPrincipal) authentication.getPrincipal();
+            String jwt = jwtTokenProvider.generateToken(authentication);
 
-        // Return the primary law role if available, otherwise base role
-        String roleToReturn = lawUserPrincipal.getPrimaryRole();
+            // Return the primary law role if available, otherwise base role
+            String roleToReturn = lawUserPrincipal.getPrimaryRole();
+            System.out.println("LawAuthController: Generated JWT token, role: " + roleToReturn);
 
-        return ResponseEntity.ok(new JwtAuthenticationResponse(jwt, roleToReturn));
+            return ResponseEntity.ok(new JwtAuthenticationResponse(jwt, roleToReturn));
+        } catch (Exception e) {
+            System.out.println("LawAuthController: Login failed - " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(401).body("Login failed: " + e.getMessage());
+        }
     }
 } 

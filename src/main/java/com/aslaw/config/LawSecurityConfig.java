@@ -6,14 +6,12 @@ import com.infracore.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -33,21 +31,8 @@ public class LawSecurityConfig {
     private final LawUserDetailsService lawUserDetailsService;
 
     @Bean
-    @Primary
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    @Primary
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
-
-    @Bean
-    @Primary
-    public UserDetailsService userDetailsService() {
-        return lawUserDetailsService;
     }
 
     @Bean
@@ -56,10 +41,10 @@ public class LawSecurityConfig {
     }
 
     @Bean
-    @Primary
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http, 
-            JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            AuthenticationManager authenticationManager) throws Exception {
         
         return http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -97,12 +82,12 @@ public class LawSecurityConfig {
                 // All other requests need authentication
                 .anyRequest().authenticated()
             )
+            .authenticationManager(authenticationManager)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .build();
     }
 
     @Bean
-    @Primary
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
