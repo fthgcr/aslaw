@@ -32,11 +32,17 @@
 		<springdoc.version>2.3.0</springdoc.version>
 	</properties>
 
-	<!-- GitHub Packages Repository -->
+	<!-- Repositories -->
 	<repositories>
+		<!-- GitHub Packages Repository -->
 		<repository>
 			<id>github</id>
 			<url>https://maven.pkg.github.com/fthgcr/infra-core</url>
+		</repository>
+		<!-- Maven Central for public dependencies -->
+		<repository>
+			<id>central</id>
+			<url>https://repo1.maven.org/maven2</url>
 		</repository>
 	</repositories>
 
