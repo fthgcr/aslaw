@@ -2,7 +2,7 @@ services:
   - type: web
     name: aslaw-backend
     env: docker
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./Dockerfile.render
     plan: free
     region: frankfurt
     branch: main
@@ -48,4 +48,4 @@ databases:
     databaseName: aslaw
     user: aslaw_user
     plan: free
-    region: frankfurt 
+    region: frankfurt
