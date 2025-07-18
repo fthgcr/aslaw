@@ -19,11 +19,9 @@ spring:
         jdbc:
           time_zone: UTC
 
-# Server configuration - Railway için context path
+# Server configuration
 server:
   port: ${PORT:8080}
-  servlet:
-    context-path: /api
 
 # JWT Configuration
 app:
@@ -55,7 +53,7 @@ management:
     health:
       show-details: when-authorized
 
-# File upload - Railway için
+# File upload - Render için
 file:
   upload:
     directory: /app/uploads

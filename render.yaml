@@ -21,7 +21,11 @@ services:
     envVars:
       # Spring Profile
       - key: SPRING_PROFILES_ACTIVE
-        value: prod
+        value: render
+        
+      # Database connection (Render otomatik inject eder)
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
         
       # Database connection (Render otomatik inject eder)
       - key: DATABASE_URL
