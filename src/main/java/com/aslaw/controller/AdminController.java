@@ -39,15 +39,7 @@ public class AdminController {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Autowired
-    AdminController(UserService userService, LawUserService lawUserService, LawUserRepository lawUserRepository, ClientService clientService, RoleRepository roleRepository, PasswordEncoder passwordEncoder){
-        this.userService = userService;
-        this.lawUserService = lawUserService;
-        this.lawUserRepository = lawUserRepository;
-        this.clientService = clientService;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+    // Constructor otomatik olarak @RequiredArgsConstructor tarafından oluşturulduğu için manuel constructor kaldırıldı
 
     /**
      * Get all users (only for admin)
@@ -660,4 +652,4 @@ public class AdminController {
         public String getRole() { return role; }
         public void setRole(String role) { this.role = role; }
     }
-} 
+}
