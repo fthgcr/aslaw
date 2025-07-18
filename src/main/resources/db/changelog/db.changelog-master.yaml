@@ -31,4 +31,7 @@ databaseChangeLog:
       relativeToChangelogFile: false
   - include:
       file: db/changelog/v1.4/add-public-url-to-documents.sql
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/v1.5/01-fix-documents-id-type.sql
       relativeToChangelogFile: false 
