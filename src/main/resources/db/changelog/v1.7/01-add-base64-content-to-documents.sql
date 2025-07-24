@@ -3,9 +3,9 @@
 --changeset liquibase:add-base64-content-to-documents splitStatements:false runOnChange:false
 -- Add base64 content field to documents table for in-database storage
 
--- Add base64 content column
+-- Add base64 content column (PostgreSQL uses TEXT instead of LONGTEXT)
 ALTER TABLE documents 
-ADD COLUMN base64_content LONGTEXT;
+ADD COLUMN base64_content TEXT;
 
 -- Update storage_type default to base64 for new documents
 ALTER TABLE documents 

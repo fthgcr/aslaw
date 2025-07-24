@@ -41,7 +41,7 @@ public class Document {
     private String publicUrl; // Keep for external links
     
     @Lob
-    @Column(name = "base64_content", columnDefinition = "LONGTEXT")
+    @Column(name = "base64_content", columnDefinition = "TEXT")
     private String base64Content; // New: Base64 encoded file content
     
     @Column(name = "storage_type", nullable = false)
