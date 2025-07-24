@@ -40,4 +40,7 @@ databaseChangeLog:
       relativeToChangelogFile: false
   - include:
       file: db/changelog/v1.7/01-add-base64-content-to-documents.sql
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/v1.8/01-make-email-nullable.sql
       relativeToChangelogFile: false 

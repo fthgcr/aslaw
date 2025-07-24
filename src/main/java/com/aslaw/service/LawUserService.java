@@ -79,7 +79,14 @@ public class LawUserService {
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setEmail(request.getEmail());
+        
+        // Email handling - if null or empty, generate a default email
+        String email = request.getEmail();
+        if (email == null || email.trim().isEmpty()) {
+            email = request.getUsername() + "@lawportal.local";
+        }
+        user.setEmail(email);
+        
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setPhoneNumber(request.getPhoneNumber());
