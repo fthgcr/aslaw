@@ -16,10 +16,17 @@ spring:
       hibernate:
         dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
         format_sql: false
+        jdbc:
+          lob:
+            non_contextual_creation: true # For LONGTEXT/LOB support
     open-in-view: false
   liquibase:
     enabled: ${LIQUIBASE_ENABLED:false}
     change-log: classpath:db/changelog/db.changelog-master.yaml
+  servlet:
+    multipart:
+      max-file-size: 50MB # Increased for base64 storage
+      max-request-size: 100MB
 
 springdoc:
   api-docs:
@@ -33,11 +40,16 @@ app:
     jwt:
       secret: ${JWT_SECRET:defaultSecretKeyForDevelopmentOnlyNotForProduction}
       expiration: 86400000 # 24 hours
+  storage:
+    type: base64 # Default storage type
+    max-file-size: 50MB # Maximum file size for base64 storage
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*,https://localhost:*,https://*.onrender.com,https://*.netlify.app,https://*.vercel.app}
 
 server:
   port: ${PORT:8080}
+  tomcat:
+    max-http-form-post-size: 100MB # Support large base64 uploads
 
 logging:
   level:
@@ -60,8 +72,3 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-
-file:
-  upload:
-    directory: ${UPLOAD_DIR:/tmp/uploads}
-    max-size: 10MB

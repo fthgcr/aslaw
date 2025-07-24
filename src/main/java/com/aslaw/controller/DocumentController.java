@@ -1,30 +1,24 @@
 package com.aslaw.controller;
 
 import com.aslaw.dto.DocumentDTO;
-import com.aslaw.entity.Case;
 import com.aslaw.entity.Document;
-import com.aslaw.repository.CaseRepository;
 import com.aslaw.service.DocumentService;
-import com.infracore.entity.User;
-import com.infracore.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.security.core.Authentication;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.util.List;
-import java.util.Optional;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -33,137 +27,163 @@ public class DocumentController {
 
     private final DocumentService documentService;
 
-    private final CaseRepository caseRepository;
-
-    private final UserRepository userRepository;
-
     /**
      * Get all documents
      */
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<List<DocumentDTO>> getAllDocuments() {
-        List<DocumentDTO> documents = documentService.getAllDocuments();
-        return ResponseEntity.ok(documents);
-    }
-
-    /**
-     * Get document by ID
-     */
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
-    public ResponseEntity<Document> getDocumentById(@PathVariable Long id) {
-        Optional<Document> document = documentService.getDocumentById(id);
-        return document.map(ResponseEntity::ok)
-                      .orElse(ResponseEntity.notFound().build());
+        try {
+            List<DocumentDTO> documents = documentService.getAllDocuments();
+            return ResponseEntity.ok(documents);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     /**
      * Get documents by case ID
      */
     @GetMapping("/case/{caseId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT')")
     public ResponseEntity<List<DocumentDTO>> getDocumentsByCaseId(@PathVariable Long caseId) {
-        List<DocumentDTO> documents = documentService.getDocumentsByCaseId(caseId);
-        return ResponseEntity.ok(documents);
-    }
-
-    /**
-     * Get current client's own documents (from all their cases)
-     */
-    @GetMapping("/my-documents")
-    @PreAuthorize("hasRole('CLIENT') or hasRole('USER')")
-    public ResponseEntity<List<DocumentDTO>> getMyOwnDocuments() {
         try {
-            // Get current user from security context
-            String currentUsername = org.springframework.security.core.context.SecurityContextHolder
-                    .getContext().getAuthentication().getName();
-            
-            User currentUser = userRepository.findByUsername(currentUsername)
-                    .orElseThrow(() -> new RuntimeException("Current user not found"));
-            
-            List<DocumentDTO> documents = documentService.getDocumentsByClientId(currentUser.getId());
+            List<DocumentDTO> documents = documentService.getDocumentsByCaseId(caseId);
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(500).build();
         }
     }
 
     /**
-     * Upload document
+     * Get document by ID
+     */
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT')")
+    public ResponseEntity<DocumentDTO> getDocumentById(@PathVariable Long id) {
+        try {
+            Optional<Document> document = documentService.getDocumentById(id);
+            if (document.isPresent()) {
+                return ResponseEntity.ok(new DocumentDTO(document.get()));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
+     * Upload document (traditional file upload)
      */
     @PostMapping("/upload")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<?> uploadDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam("type") String type,
-            @RequestParam("legalCaseId") Long legalCaseId) {
+            @RequestParam("type") Document.DocumentType type,
+            @RequestParam("legalCaseId") Long caseId,
+            @RequestParam(value = "description", required = false) String description) {
         
         try {
-            Document.DocumentType documentType = Document.DocumentType.valueOf(type.toUpperCase());
-            DocumentDTO document = documentService.uploadDocument(file, title, description, documentType, legalCaseId);
-            return ResponseEntity.ok(document);
+            DocumentDTO documentDTO = documentService.uploadDocument(file, title, description, type, caseId);
+            return ResponseEntity.ok(documentDTO);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Invalid document type: " + type);
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                               .body("File upload failed: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", "File processing error: " + e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                               .body("Error: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", "Upload failed: " + e.getMessage()));
         }
     }
 
     /**
-     * Create document (without file upload)
+     * Create document from base64 (for Angular integration)
      */
-    @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
-    public ResponseEntity<?> createDocument(@RequestBody DocumentCreateRequest request) {
+    @PostMapping("/create-base64")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<?> createDocumentFromBase64(@RequestBody CreateBase64DocumentRequest request) {
         try {
-            // Validate case exists
-            Case legalCase = caseRepository.findById(request.getLegalCaseId())
-                    .orElseThrow(() -> new RuntimeException("Case not found with id: " + request.getLegalCaseId()));
-
-            Document document = new Document();
-            document.setTitle(request.getTitle());
-            document.setDescription(request.getDescription());
-            document.setType(request.getType());
-            document.setLegalCase(legalCase);
-
-            Document savedDocument = documentService.createDocument(document);
-            return ResponseEntity.ok(savedDocument);
+            DocumentDTO documentDTO = documentService.createDocumentFromBase64(
+                request.getTitle(),
+                request.getDescription(),
+                request.getType(),
+                request.getLegalCaseId(),
+                request.getFileName(),
+                request.getContentType(),
+                request.getBase64Content()
+            );
+            return ResponseEntity.ok(documentDTO);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                               .body("Error creating document: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", "Creation failed: " + e.getMessage()));
         }
     }
 
     /**
-     * Update document
+     * Download document as base64
+     */
+    @GetMapping("/{id}/download-base64")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT')")
+    public ResponseEntity<?> downloadDocumentAsBase64(@PathVariable Long id) {
+        try {
+            String base64Content = documentService.downloadDocumentAsBase64(id);
+            Document document = documentService.findById(id);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("base64Content", base64Content);
+            response.put("fileName", document.getFileName());
+            response.put("contentType", document.getContentType());
+            response.put("fileSize", document.getFileSize());
+            response.put("title", document.getTitle());
+            
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Download failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Download document as file (traditional download)
+     */
+    @GetMapping("/{id}/download")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT')")
+    public ResponseEntity<Resource> downloadDocument(@PathVariable Long id) {
+        try {
+            Resource resource = documentService.downloadDocumentAsResource(id);
+            Document document = documentService.findById(id);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(document.getContentType()))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, 
+                           "attachment; filename=\"" + document.getFileName() + "\"")
+                    .body(resource);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
+     * Update document metadata
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
-    public ResponseEntity<?> updateDocument(@PathVariable Long id, @RequestBody DocumentUpdateRequest request) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<?> updateDocument(
+            @PathVariable Long id,
+            @RequestBody UpdateDocumentRequest request) {
         try {
-            Document updatedDocument = new Document();
-            updatedDocument.setTitle(request.getTitle());
-            updatedDocument.setDescription(request.getDescription());
-            updatedDocument.setType(request.getType());
-            
-            if (request.getLegalCaseId() != null) {
-                Case legalCase = caseRepository.findById(request.getLegalCaseId())
-                        .orElseThrow(() -> new RuntimeException("Case not found with id: " + request.getLegalCaseId()));
-                updatedDocument.setLegalCase(legalCase);
-            }
-
-            Document document = documentService.updateDocument(id, updatedDocument);
-            return ResponseEntity.ok(document);
+            DocumentDTO documentDTO = documentService.updateDocument(
+                id, request.getTitle(), request.getDescription(), request.getType());
+            return ResponseEntity.ok(documentDTO);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body("Update failed: " + e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                               .body("Error updating document: " + e.getMessage());
+            return ResponseEntity.status(500).body("Update failed: " + e.getMessage());
         }
     }
 
@@ -171,41 +191,15 @@ public class DocumentController {
      * Delete document
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
     public ResponseEntity<?> deleteDocument(@PathVariable Long id) {
         try {
             documentService.deleteDocument(id);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok(Map.of("message", "Document deleted successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body("Document not found: " + e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                               .body("Error deleting document: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Download document
-     */
-    @GetMapping("/{id}/download")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
-    public ResponseEntity<Resource> downloadDocument(@PathVariable Long id) {
-        try {
-            Optional<Document> documentOpt = documentService.getDocumentById(id);
-            if (documentOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            Document document = documentOpt.get();
-            Resource resource = documentService.getFileResource(id);
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(document.getContentType()))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, 
-                           "attachment; filename=\"" + document.getFileName() + "\"")
-                    .body(resource);
-        } catch (MalformedURLException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(500).body("Deletion failed: " + e.getMessage());
         }
     }
 
@@ -213,154 +207,48 @@ public class DocumentController {
      * Search documents by title
      */
     @GetMapping("/search/title")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
-    public ResponseEntity<List<DocumentDTO>> searchByTitle(@RequestParam String title) {
-        List<DocumentDTO> documents = documentService.searchDocumentsByTitle(title);
-        return ResponseEntity.ok(documents);
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<List<DocumentDTO>> searchDocumentsByTitle(@RequestParam String title) {
+        try {
+            List<DocumentDTO> documents = documentService.searchDocumentsByTitle(title);
+            return ResponseEntity.ok(documents);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     /**
      * Search documents by file name
      */
     @GetMapping("/search/filename")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
-    public ResponseEntity<List<DocumentDTO>> searchByFileName(@RequestParam String fileName) {
-        List<DocumentDTO> documents = documentService.searchDocumentsByFileName(fileName);
-        return ResponseEntity.ok(documents);
-    }
-
-    @GetMapping("/upload-config")
-    public ResponseEntity<Map<String, Object>> getUploadConfig() {
-        Map<String, Object> config = new HashMap<>();
-        
-        // Upload provider bilgisi
-        String uploadProvider = System.getProperty("app.upload.provider", 
-            System.getenv("UPLOAD_PROVIDER") != null ? System.getenv("UPLOAD_PROVIDER") : "local");
-        
-        config.put("uploadProvider", uploadProvider);
-        config.put("timestamp", System.currentTimeMillis());
-        
-        // Cloudinary durumu
-        if ("cloudinary".equals(uploadProvider)) {
-            String cloudName = System.getenv("CLOUDINARY_CLOUD_NAME");
-            config.put("cloudinaryConfigured", cloudName != null && !cloudName.isEmpty() && !"dummy".equals(cloudName));
-            config.put("cloudName", cloudName != null ? cloudName : "not-set");
-            config.put("storageType", "private");
-            config.put("features", Map.of(
-                "privateStorage", true,
-                "signedUrls", true,
-                "autoBackup", true,
-                "cdn", true
-            ));
-        } else {
-            config.put("storageType", "local");
-            config.put("features", Map.of(
-                "privateStorage", false,
-                "signedUrls", false,
-                "autoBackup", false,
-                "cdn", false
-            ));
-        }
-        
-        return ResponseEntity.ok(config);
-    }
-
-    @PostMapping("/test-upload")
-    public ResponseEntity<?> testUpload(@RequestParam("file") MultipartFile file) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER')")
+    public ResponseEntity<List<DocumentDTO>> searchDocumentsByFileName(@RequestParam String fileName) {
         try {
-            Map<String, Object> response = new HashMap<>();
-            
-            if (file.isEmpty()) {
-                return ResponseEntity.badRequest().body("File is empty");
-            }
-            
-            response.put("fileName", file.getOriginalFilename());
-            response.put("fileSize", file.getSize());
-            response.put("contentType", file.getContentType());
-            
-            // Upload provider kontrol et
-            String uploadProvider = System.getProperty("app.upload.provider", 
-                System.getenv("UPLOAD_PROVIDER") != null ? System.getenv("UPLOAD_PROVIDER") : "local");
-            
-            response.put("uploadProvider", uploadProvider);
-            response.put("message", "File info retrieved successfully. Use /api/documents/upload for actual upload.");
-            
-            return ResponseEntity.ok(response);
-            
+            List<DocumentDTO> documents = documentService.searchDocumentsByFileName(fileName);
+            return ResponseEntity.ok(documents);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+            return ResponseEntity.status(500).build();
         }
     }
 
-    @GetMapping("/download-private/{documentId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT')")
-    public ResponseEntity<?> downloadPrivateDocument(@PathVariable Long documentId, Authentication authentication) {
-        try {
-            Document document = documentService.findById(documentId);
-
-            // Private Cloudinary dosyası için signed URL döndür
-            if (document.getPublicUrl() != null && document.getPublicUrl().contains("cloudinary")) {
-                
-                String signedUrl = documentService.getSignedDownloadUrl(documentId);
-                
-                Map<String, Object> response = new HashMap<>();
-                response.put("downloadUrl", signedUrl);
-                response.put("fileName", document.getFileName());
-                response.put("contentType", document.getContentType());
-                response.put("fileSize", document.getFileSize());
-                response.put("message", "Use this signed URL for secure download (valid for 1 hour)");
-                response.put("expiresIn", "1 hour");
-                
-                return ResponseEntity.ok(response);
-            } else {
-                // Local file için mevcut download metodunu kullan
-                return downloadDocument(documentId);
-            }
-
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
-                "error", "Download error: " + e.getMessage(),
-                "documentId", documentId
-            ));
-        }
-    }
-
+    /**
+     * Get storage statistics
+     */
     @GetMapping("/storage-stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getStorageStats() {
         try {
-            List<DocumentDTO> allDocuments = documentService.getAllDocuments();
+            DocumentService.DocumentStorageStats stats = documentService.getStorageStats();
             
-            Map<String, Object> stats = new HashMap<>();
+            Map<String, Object> response = new HashMap<>();
+            response.put("totalDocuments", stats.getTotalDocuments());
+            response.put("base64Documents", stats.getBase64Documents());
+            response.put("totalSizeBytes", stats.getTotalSizeBytes());
+            response.put("totalSizeMB", stats.getTotalSizeMB());
+            response.put("storageType", "base64");
+            response.put("timestamp", System.currentTimeMillis());
             
-            // Total counts
-            stats.put("totalDocuments", allDocuments.size());
-            
-            // Storage type breakdown
-            long cloudinaryCount = allDocuments.stream()
-                .mapToLong(doc -> "cloudinary".equals(doc.getStorageType()) ? 1 : 0)
-                .sum();
-            long localCount = allDocuments.size() - cloudinaryCount;
-            
-            stats.put("cloudinaryDocuments", cloudinaryCount);
-            stats.put("localDocuments", localCount);
-            
-            // File size totals
-            long totalSize = allDocuments.stream()
-                .mapToLong(doc -> doc.getFileSize() != null ? doc.getFileSize() : 0)
-                .sum();
-            
-            stats.put("totalSizeBytes", totalSize);
-            stats.put("totalSizeMB", Math.round(totalSize / (1024.0 * 1024.0) * 100.0) / 100.0);
-            
-            // Current configuration
-            String uploadProvider = System.getenv("UPLOAD_PROVIDER") != null ? 
-                System.getenv("UPLOAD_PROVIDER") : "local";
-            stats.put("currentUploadProvider", uploadProvider);
-            stats.put("timestamp", System.currentTimeMillis());
-            
-            return ResponseEntity.ok(stats);
-            
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "Could not retrieve storage stats: " + e.getMessage()
@@ -368,44 +256,144 @@ public class DocumentController {
         }
     }
 
-    // DTOs
-    public static class DocumentCreateRequest {
-        private String title;
-        private String description;
-        private Document.DocumentType type;
-        private Long legalCaseId;
-
-        // Getters and setters
-        public String getTitle() { return title; }
-        public void setTitle(String title) { this.title = title; }
+    /**
+     * Get system configuration
+     */
+    @GetMapping("/config")
+    public ResponseEntity<Map<String, Object>> getConfig() {
+        Map<String, Object> config = new HashMap<>();
+        config.put("storageType", "base64");
+        config.put("features", Map.of(
+            "inDatabaseStorage", true,
+            "fileSystemStorage", false,
+            "cloudStorage", false,
+            "base64Upload", true,
+            "base64Download", true
+        ));
+        config.put("maxFileSize", "10MB");
+        config.put("supportedFormats", List.of("PDF", "DOC", "DOCX", "XLS", "XLSX", "PNG", "JPG", "JPEG"));
+        config.put("timestamp", System.currentTimeMillis());
         
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
-        
-        public Document.DocumentType getType() { return type; }
-        public void setType(Document.DocumentType type) { this.type = type; }
-        
-        public Long getLegalCaseId() { return legalCaseId; }
-        public void setLegalCaseId(Long legalCaseId) { this.legalCaseId = legalCaseId; }
+        return ResponseEntity.ok(config);
     }
 
-    public static class DocumentUpdateRequest {
+    /**
+     * Health check endpoint
+     */
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> healthCheck() {
+        Map<String, Object> health = new HashMap<>();
+        
+        try {
+            // Test database connection by getting document count
+            DocumentService.DocumentStorageStats stats = documentService.getStorageStats();
+            
+            health.put("status", "UP");
+            health.put("storage", "base64");
+            health.put("database", "connected");
+            health.put("totalDocuments", stats.getTotalDocuments());
+            health.put("totalSizeMB", stats.getTotalSizeMB());
+            health.put("timestamp", System.currentTimeMillis());
+            
+            return ResponseEntity.ok(health);
+        } catch (Exception e) {
+            health.put("status", "DOWN");
+            health.put("error", e.getMessage());
+            health.put("timestamp", System.currentTimeMillis());
+            
+            return ResponseEntity.status(503).body(health);
+        }
+    }
+
+    /**
+     * Test base64 conversion endpoint
+     */
+    @PostMapping("/test-base64")
+    public ResponseEntity<Map<String, Object>> testBase64Conversion(@RequestParam("file") MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("fileName", file.getOriginalFilename());
+            result.put("contentType", file.getContentType());
+            result.put("fileSize", file.getSize());
+            result.put("fileSizeFormatted", formatFileSize(file.getSize()));
+
+            // Convert to base64 and back to test
+            String base64Content = Base64.getEncoder().encodeToString(file.getBytes());
+            byte[] decodedBytes = Base64.getDecoder().decode(base64Content);
+            
+            result.put("base64Length", base64Content.length());
+            result.put("decodedSize", decodedBytes.length);
+            result.put("conversionSuccess", decodedBytes.length == file.getSize());
+            result.put("storageType", "base64");
+            result.put("message", "File successfully converted to base64 and back");
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Test failed: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Utility method to format file size
+     */
+    private String formatFileSize(long bytes) {
+        if (bytes == 0) return "0 Bytes";
+        int k = 1024;
+        String[] sizes = {"Bytes", "KB", "MB", "GB"};
+        int i = (int) Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round((bytes / Math.pow(k, i)) * 100.0) / 100.0 + " " + sizes[i];
+    }
+
+    // DTOs for request/response
+    public static class CreateBase64DocumentRequest {
         private String title;
         private String description;
         private Document.DocumentType type;
         private Long legalCaseId;
+        private String fileName;
+        private String contentType;
+        private String base64Content;
 
         // Getters and setters
         public String getTitle() { return title; }
         public void setTitle(String title) { this.title = title; }
-        
+
         public String getDescription() { return description; }
         public void setDescription(String description) { this.description = description; }
-        
+
         public Document.DocumentType getType() { return type; }
         public void setType(Document.DocumentType type) { this.type = type; }
-        
+
         public Long getLegalCaseId() { return legalCaseId; }
         public void setLegalCaseId(Long legalCaseId) { this.legalCaseId = legalCaseId; }
+
+        public String getFileName() { return fileName; }
+        public void setFileName(String fileName) { this.fileName = fileName; }
+
+        public String getContentType() { return contentType; }
+        public void setContentType(String contentType) { this.contentType = contentType; }
+
+        public String getBase64Content() { return base64Content; }
+        public void setBase64Content(String base64Content) { this.base64Content = base64Content; }
+    }
+
+    public static class UpdateDocumentRequest {
+        private String title;
+        private String description;
+        private Document.DocumentType type;
+
+        // Getters and setters
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+
+        public Document.DocumentType getType() { return type; }
+        public void setType(Document.DocumentType type) { this.type = type; }
     }
 } 

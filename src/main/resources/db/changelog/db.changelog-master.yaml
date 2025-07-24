@@ -37,4 +37,7 @@ databaseChangeLog:
       relativeToChangelogFile: false
   - include:
       file: db/changelog/v1.6/01-add-storage-fields-to-documents.sql
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/v1.7/01-add-base64-content-to-documents.sql
       relativeToChangelogFile: false 

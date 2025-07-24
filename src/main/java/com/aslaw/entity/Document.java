@@ -34,17 +34,21 @@ public class Document {
     @Column(columnDefinition = "TEXT")
     private String description;
     
-    @Column(nullable = false)
-    private String filePath;
+    @Column(nullable = true)
+    private String filePath; // Keep for backward compatibility
     
     @Column(name = "public_url")
-    private String publicUrl;
+    private String publicUrl; // Keep for external links
+    
+    @Lob
+    @Column(name = "base64_content", columnDefinition = "LONGTEXT")
+    private String base64Content; // New: Base64 encoded file content
     
     @Column(name = "storage_type", nullable = false)
-    private String storageType = "local"; // "local" or "cloudinary"
+    private String storageType = "base64"; // "base64", "local", "cloudinary"
     
     @Column(name = "is_private")
-    private Boolean isPrivate = false; // true for private Cloudinary storage
+    private Boolean isPrivate = true; // true for base64 storage
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -97,6 +101,9 @@ public class Document {
 
     public String getPublicUrl() { return publicUrl; }
     public void setPublicUrl(String publicUrl) { this.publicUrl = publicUrl; }
+
+    public String getBase64Content() { return base64Content; }
+    public void setBase64Content(String base64Content) { this.base64Content = base64Content; }
 
     public String getStorageType() { return storageType; }
     public void setStorageType(String storageType) { this.storageType = storageType; }

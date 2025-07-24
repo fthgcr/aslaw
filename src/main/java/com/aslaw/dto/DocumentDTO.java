@@ -14,6 +14,7 @@ public class DocumentDTO {
     private String publicUrl;
     private String storageType;
     private Boolean isPrivate;
+    private String base64Content; // Only populated when specifically requested
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
     
@@ -96,6 +97,9 @@ public class DocumentDTO {
 
     public Boolean getIsPrivate() { return isPrivate; }
     public void setIsPrivate(Boolean isPrivate) { this.isPrivate = isPrivate; }
+
+    public String getBase64Content() { return base64Content; }
+    public void setBase64Content(String base64Content) { this.base64Content = base64Content; }
 
     public LocalDateTime getCreatedDate() { return createdDate; }
     public void setCreatedDate(LocalDateTime createdDate) { this.createdDate = createdDate; }
