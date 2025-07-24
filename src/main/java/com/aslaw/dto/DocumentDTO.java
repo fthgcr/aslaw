@@ -12,8 +12,9 @@ public class DocumentDTO {
     private String description;
     private Document.DocumentType type;
     private String publicUrl;
-    private String storageType;
-    private Boolean isPrivate;
+    // Temporarily disabled until database migration is applied
+    // private String storageType;
+    // private Boolean isPrivate;
     private String base64Content; // Only populated when specifically requested
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
@@ -43,8 +44,9 @@ public class DocumentDTO {
         this.description = document.getDescription();
         this.type = document.getType();
         this.publicUrl = document.getPublicUrl();
-        this.storageType = document.getStorageType();
-        this.isPrivate = document.getIsPrivate();
+        // Temporarily disabled until database migration is applied
+        // this.storageType = document.getStorageType();
+        // this.isPrivate = document.getIsPrivate();
         this.createdDate = document.getCreatedDate();
         this.updatedDate = document.getUpdatedDate();
         
@@ -92,11 +94,12 @@ public class DocumentDTO {
     public String getPublicUrl() { return publicUrl; }
     public void setPublicUrl(String publicUrl) { this.publicUrl = publicUrl; }
 
-    public String getStorageType() { return storageType; }
-    public void setStorageType(String storageType) { this.storageType = storageType; }
+    // Temporarily disabled until database migration is applied
+    // public String getStorageType() { return storageType; }
+    // public void setStorageType(String storageType) { this.storageType = storageType; }
 
-    public Boolean getIsPrivate() { return isPrivate; }
-    public void setIsPrivate(Boolean isPrivate) { this.isPrivate = isPrivate; }
+    // public Boolean getIsPrivate() { return isPrivate; }
+    // public void setIsPrivate(Boolean isPrivate) { this.isPrivate = isPrivate; }
 
     public String getBase64Content() { return base64Content; }
     public void setBase64Content(String base64Content) { this.base64Content = base64Content; }

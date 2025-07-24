@@ -34,8 +34,8 @@ public class Document {
     @Column(columnDefinition = "TEXT")
     private String description;
     
-    @Column(nullable = true)
-    private String filePath; // Keep for backward compatibility
+    @Column(nullable = false)
+    private String filePath = ""; // Default empty string for base64 storage
     
     @Column(name = "public_url")
     private String publicUrl; // Keep for external links
@@ -44,11 +44,12 @@ public class Document {
     @Column(name = "base64_content", columnDefinition = "TEXT")
     private String base64Content; // New: Base64 encoded file content
     
-    @Column(name = "storage_type", nullable = false)
-    private String storageType = "base64"; // "base64", "local", "cloudinary"
+    // Temporarily disabled until database migration is applied
+    // @Column(name = "storage_type")
+    // private String storageType = "base64"; // "base64", "local", "cloudinary"
     
-    @Column(name = "is_private")
-    private Boolean isPrivate = true; // true for base64 storage
+    // @Column(name = "is_private")
+    // private Boolean isPrivate = true; // true for base64 storage
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -105,11 +106,12 @@ public class Document {
     public String getBase64Content() { return base64Content; }
     public void setBase64Content(String base64Content) { this.base64Content = base64Content; }
 
-    public String getStorageType() { return storageType; }
-    public void setStorageType(String storageType) { this.storageType = storageType; }
+    // Temporarily disabled until database migration is applied
+    // public String getStorageType() { return storageType; }
+    // public void setStorageType(String storageType) { this.storageType = storageType; }
 
-    public Boolean getIsPrivate() { return isPrivate; }
-    public void setIsPrivate(Boolean isPrivate) { this.isPrivate = isPrivate; }
+    // public Boolean getIsPrivate() { return isPrivate; }
+    // public void setIsPrivate(Boolean isPrivate) { this.isPrivate = isPrivate; }
 
     public DocumentType getType() { return type; }
     public void setType(DocumentType type) { this.type = type; }

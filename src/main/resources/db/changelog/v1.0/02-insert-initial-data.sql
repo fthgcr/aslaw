@@ -29,7 +29,7 @@ INSERT INTO users (
 VALUES (
     'admin',
     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', -- password: 123123 (yeni hash)
-    'admin@lawportal.com',
+    'admin@lexofis.com',
     'System',
     'Admin',
     TRUE,

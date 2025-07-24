@@ -83,7 +83,7 @@ public class DataInitializer implements CommandLineRunner {
             User admin = new User();
             admin.setUsername("admin");
             admin.setPassword(passwordEncoder.encode("123123"));
-            admin.setEmail("admin@lawportal.com");
+            admin.setEmail("admin@lexofis.com");
             admin.setFirstName("System");
             admin.setLastName("Admin");
             admin.setEnabled(true);

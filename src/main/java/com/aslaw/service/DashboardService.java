@@ -98,11 +98,12 @@ public class DashboardService {
     @Transactional(readOnly = true)
     public List<RecentActivity> getRecentActivities() {
         try {
-            List<ActivityLog> activityLogs = activityLogService.getRecentActivities(10);
+            List<ActivityLog> activityLogs = activityLogService.getRecentActivities(5); // Son 5 aktivite
             
             if (!activityLogs.isEmpty()) {
                 return activityLogs.stream()
                         .map(this::convertToRecentActivity)
+                        .limit(5) // Güvenlik için limit ekle
                         .toList();
             }
         } catch (Exception e) {

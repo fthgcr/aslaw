@@ -5,9 +5,11 @@ import com.aslaw.entity.LawRole;
 import com.aslaw.entity.LawUser;
 import com.aslaw.repository.LawRoleRepository;
 import com.aslaw.repository.LawUserRepository;
+import com.infracore.entity.ActivityLog;
 import com.infracore.entity.Role;
 import com.infracore.entity.User;
 import com.infracore.repository.RoleRepository;
+import com.infracore.service.ActivityLogService;
 import com.infracore.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +29,7 @@ public class LawUserService {
     private final UserService userService;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ActivityLogService activityLogService;
 
     @Transactional(readOnly = true)
     public List<LawUserDTO> getAllLawUsers() {
@@ -83,7 +86,7 @@ public class LawUserService {
         // Email handling - if null or empty, generate a default email
         String email = request.getEmail();
         if (email == null || email.trim().isEmpty()) {
-            email = request.getUsername() + "@lawportal.local";
+            email = request.getUsername() + "@lexofis.local";
         }
         user.setEmail(email);
         
@@ -115,6 +118,23 @@ public class LawUserService {
         lawRole.ifPresent(lawUser::addLawRole);
 
         LawUser savedLawUser = lawUserRepository.save(lawUser);
+        
+        // Log activity
+        try {
+            String activityDescription = "Yeni " + getLawRoleDisplayName(request.getLawRole()) + " eklendi: " + 
+                request.getFirstName() + " " + request.getLastName();
+            
+            activityLogService.logActivity(
+                ActivityLog.ActivityType.USER_CREATED,
+                activityDescription,
+                savedUser.getId(),
+                savedUser.getFirstName() + " " + savedUser.getLastName(),
+                ActivityLog.EntityType.USER
+            );
+        } catch (Exception e) {
+            System.err.println("⚠️ Could not log user creation activity: " + e.getMessage());
+        }
+        
         return convertToDTO(savedLawUser);
     }
 
@@ -192,6 +212,18 @@ public class LawUserService {
     private Role getBaseRole(Role.RoleName roleName) {
         return roleRepository.findByName(roleName)
                 .orElseThrow(() -> new RuntimeException("Base role not found: " + roleName));
+    }
+
+    private String getLawRoleDisplayName(String lawRole) {
+        return switch (lawRole) {
+            case "LAWYER" -> "avukat";
+            case "PARTNER" -> "ortak";
+            case "CLERK" -> "katip";
+            case "PARALEGAL" -> "paralegal";
+            case "INTERN" -> "stajyer";
+            case "LEGAL_ASSISTANT" -> "hukuki asistan";
+            default -> "hukuki personel";
+        };
     }
 
     private LawUserDTO convertToDTO(LawUser lawUser) {

@@ -115,13 +115,15 @@ public class DocumentService {
         document.setFileName(StringUtils.cleanPath(file.getOriginalFilename()));
         document.setContentType(file.getContentType());
         document.setFileSize(file.getSize());
+        document.setFilePath(""); // Empty for base64 storage
         document.setType(type);
         document.setLegalCase(legalCase);
         
         // Set base64 storage information
         document.setBase64Content(base64Content);
-        document.setStorageType("base64");
-        document.setIsPrivate(true);
+        // Temporarily disabled until database migration is applied
+        // document.setStorageType("base64");
+        // document.setIsPrivate(true);
         
         // Save document
         Document savedDocument = documentRepository.save(document);
@@ -155,11 +157,13 @@ public class DocumentService {
         document.setFileName(StringUtils.cleanPath(fileName));
         document.setContentType(contentType);
         document.setFileSize((long) decodedBytes.length);
+        document.setFilePath(""); // Empty for base64 storage
         document.setType(type);
         document.setLegalCase(legalCase);
         document.setBase64Content(base64Content);
-        document.setStorageType("base64");
-        document.setIsPrivate(true);
+        // Temporarily disabled until database migration is applied
+        // document.setStorageType("base64");
+        // document.setIsPrivate(true);
         
         // Save document
         Document savedDocument = documentRepository.save(document);
@@ -269,9 +273,10 @@ public class DocumentService {
         List<Document> allDocuments = documentRepository.findAll();
         
         long totalDocuments = allDocuments.size();
-        long base64Documents = allDocuments.stream()
-                .mapToLong(doc -> "base64".equals(doc.getStorageType()) ? 1 : 0)
-                .sum();
+        // Temporarily disabled until database migration is applied
+        long base64Documents = allDocuments.size(); // Assume all are base64 for now
+        // .mapToLong(doc -> "base64".equals(doc.getStorageType()) ? 1 : 0)
+        // .sum();
         
         long totalSize = allDocuments.stream()
                 .mapToLong(doc -> doc.getFileSize() != null ? doc.getFileSize() : 0)

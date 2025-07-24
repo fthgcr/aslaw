@@ -18,6 +18,8 @@ import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.springframework.security.core.Authentication;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/cases")
@@ -131,16 +133,53 @@ public class CaseController {
      * Get case by ID
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK')")
-    public ResponseEntity<Case> getCaseById(@PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLERK') or hasRole('CLIENT') or hasRole('USER')")
+    public ResponseEntity<Case> getCaseById(@PathVariable Long id, Authentication authentication) {
         try {
             System.out.println("CaseController: getCaseById called with id: " + id);
-            return caseService.getCaseById(id)
-                    .map(caseEntity -> {
-                        System.out.println("CaseController: Case found: " + caseEntity.getTitle());
-                        return ResponseEntity.ok(caseEntity);
-                    })
-                    .orElse(ResponseEntity.notFound().build());
+            
+            Optional<Case> caseOpt = caseService.getCaseById(id);
+            if (caseOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Case caseEntity = caseOpt.get();
+            
+            // Check if current user is CLIENT/USER and trying to access their own case
+            String currentUsername = authentication.getName();
+            User currentUser = userRepository.findByUsername(currentUsername)
+                    .orElseThrow(() -> new RuntimeException("Current user not found"));
+            
+            // Get user roles
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+            boolean isLawyer = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_LAWYER"));
+            boolean isClerk = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_CLERK"));
+            boolean isClient = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_CLIENT") || auth.getAuthority().equals("ROLE_USER"));
+            
+            // Admin, Lawyer, Clerk can access all cases
+            if (isAdmin || isLawyer || isClerk) {
+                System.out.println("CaseController: Admin/Lawyer/Clerk access granted for case: " + caseEntity.getTitle());
+                return ResponseEntity.ok(caseEntity);
+            }
+            
+            // Client can only access their own cases
+            if (isClient) {
+                if (caseEntity.getClient() != null && caseEntity.getClient().getId().equals(currentUser.getId())) {
+                    System.out.println("CaseController: Client access granted for their own case: " + caseEntity.getTitle());
+                    return ResponseEntity.ok(caseEntity);
+                } else {
+                    System.out.println("CaseController: Client access denied - not their case");
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+            }
+            
+            // Default deny
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            
         } catch (Exception e) {
             System.out.println("CaseController: Error getting case: " + e.getMessage());
             e.printStackTrace();

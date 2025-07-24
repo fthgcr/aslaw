@@ -1,9 +1,11 @@
 package com.aslaw.service;
 
+import com.infracore.entity.ActivityLog;
 import com.infracore.entity.Role;
 import com.infracore.entity.User;
 import com.infracore.repository.RoleRepository;
 import com.infracore.repository.UserRepository;
+import com.infracore.service.ActivityLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -22,12 +24,14 @@ public class ClientService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ActivityLogService activityLogService;
 
     @Autowired
-    ClientService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder){
+    ClientService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, ActivityLogService activityLogService){
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.activityLogService = activityLogService;
     }
 
     /**
@@ -123,7 +127,22 @@ public class ClientService {
             throw new RuntimeException("USER role not found in database");
         }
 
-        return userRepository.save(client);
+        User savedClient = userRepository.save(client);
+        
+        // Log activity
+        try {
+            String activityDescription = "Yeni müvekkil eklendi: " + 
+                savedClient.getFirstName() + " " + savedClient.getLastName();
+            
+            activityLogService.logClientCreated(
+                savedClient.getId(),
+                savedClient.getFirstName() + " " + savedClient.getLastName()
+            );
+        } catch (Exception e) {
+            System.err.println("⚠️ Could not log client creation activity: " + e.getMessage());
+        }
+        
+        return savedClient;
     }
 
     /**

@@ -19,6 +19,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Base64;
+import org.springframework.http.HttpStatus;
+import com.infracore.entity.User;
+import com.infracore.repository.UserRepository;
+import com.aslaw.service.CaseService;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -26,6 +30,8 @@ import java.util.Base64;
 public class DocumentController {
 
     private final DocumentService documentService;
+    private final UserRepository userRepository;
+    private final CaseService caseService;
 
     /**
      * Get all documents
@@ -45,9 +51,14 @@ public class DocumentController {
      * Get documents by case ID
      */
     @GetMapping("/case/{caseId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT')")
-    public ResponseEntity<List<DocumentDTO>> getDocumentsByCaseId(@PathVariable Long caseId) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT') or hasRole('USER')")
+    public ResponseEntity<List<DocumentDTO>> getDocumentsByCaseId(@PathVariable Long caseId, Authentication authentication) {
         try {
+            // Check if user has access to this case
+            if (!hasAccessToCase(caseId, authentication)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            
             List<DocumentDTO> documents = documentService.getDocumentsByCaseId(caseId);
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
@@ -59,15 +70,22 @@ public class DocumentController {
      * Get document by ID
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT')")
-    public ResponseEntity<DocumentDTO> getDocumentById(@PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT') or hasRole('USER')")
+    public ResponseEntity<DocumentDTO> getDocumentById(@PathVariable Long id, Authentication authentication) {
         try {
-            Optional<Document> document = documentService.getDocumentById(id);
-            if (document.isPresent()) {
-                return ResponseEntity.ok(new DocumentDTO(document.get()));
-            } else {
+            Optional<Document> documentOpt = documentService.getDocumentById(id);
+            if (documentOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
+            
+            Document document = documentOpt.get();
+            
+            // Check if user has access to this document's case
+            if (!hasAccessToCase(document.getLegalCase().getId(), authentication)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            
+            return ResponseEntity.ok(new DocumentDTO(document));
         } catch (Exception e) {
             return ResponseEntity.status(500).build();
         }
@@ -125,41 +143,61 @@ public class DocumentController {
      * Download document as base64
      */
     @GetMapping("/{id}/download-base64")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT')")
-    public ResponseEntity<?> downloadDocumentAsBase64(@PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT') or hasRole('USER')")
+    public ResponseEntity<?> downloadDocumentAsBase64(@PathVariable Long id, Authentication authentication) {
         try {
+            Optional<Document> documentOpt = documentService.getDocumentById(id);
+            if (documentOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Document document = documentOpt.get();
+            
+            // Check if user has access to this document's case
+            if (!hasAccessToCase(document.getLegalCase().getId(), authentication)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            
             String base64Content = documentService.downloadDocumentAsBase64(id);
-            Document document = documentService.findById(id);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("base64Content", base64Content);
-            response.put("fileName", document.getFileName());
-            response.put("contentType", document.getContentType());
-            response.put("fileSize", document.getFileSize());
-            response.put("title", document.getTitle());
-            
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of(
+                "base64Content", base64Content,
+                "fileName", document.getFileName(),
+                "contentType", document.getContentType()
+            ));
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body("Document not found: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Download failed: " + e.getMessage());
         }
     }
 
     /**
-     * Download document as file (traditional download)
+     * Download document as resource (file download)
      */
     @GetMapping("/{id}/download")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT')")
-    public ResponseEntity<Resource> downloadDocument(@PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT') or hasRole('USER')")
+    public ResponseEntity<Resource> downloadDocument(@PathVariable Long id, Authentication authentication) {
         try {
+            Optional<Document> documentOpt = documentService.getDocumentById(id);
+            if (documentOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Document document = documentOpt.get();
+            
+            // Check if user has access to this document's case
+            if (!hasAccessToCase(document.getLegalCase().getId(), authentication)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            
             Resource resource = documentService.downloadDocumentAsResource(id);
-            Document document = documentService.findById(id);
-
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + document.getFileName() + "\"");
+            headers.add(HttpHeaders.CONTENT_TYPE, document.getContentType());
+            
             return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(document.getContentType()))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, 
-                           "attachment; filename=\"" + document.getFileName() + "\"")
+                    .headers(headers)
                     .body(resource);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -338,6 +376,24 @@ public class DocumentController {
     }
 
     /**
+     * Get current client's own documents (from all their cases)
+     */
+    @GetMapping("/my-documents")
+    @PreAuthorize("hasRole('CLIENT') or hasRole('USER')")
+    public ResponseEntity<List<DocumentDTO>> getMyDocuments(Authentication authentication) {
+        try {
+            String currentUsername = authentication.getName();
+            User currentUser = userRepository.findByUsername(currentUsername)
+                    .orElseThrow(() -> new RuntimeException("Current user not found"));
+            
+            List<DocumentDTO> documents = documentService.getDocumentsByClientId(currentUser.getId());
+            return ResponseEntity.ok(documents);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
      * Utility method to format file size
      */
     private String formatFileSize(long bytes) {
@@ -395,5 +451,45 @@ public class DocumentController {
 
         public Document.DocumentType getType() { return type; }
         public void setType(Document.DocumentType type) { this.type = type; }
+    }
+
+    /**
+     * Check if current user has access to a specific case
+     */
+    private boolean hasAccessToCase(Long caseId, Authentication authentication) {
+        try {
+            String currentUsername = authentication.getName();
+            User currentUser = userRepository.findByUsername(currentUsername)
+                    .orElseThrow(() -> new RuntimeException("Current user not found"));
+            
+            // Get user roles
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+            boolean isLawyer = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_LAWYER"));
+            boolean isClerk = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_CLERK"));
+            boolean isClient = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_CLIENT") || auth.getAuthority().equals("ROLE_USER"));
+            
+            // Admin, Lawyer, Clerk can access all cases
+            if (isAdmin || isLawyer || isClerk) {
+                return true;
+            }
+            
+            // Client can only access their own cases
+            if (isClient) {
+                // Get case and check if client owns it
+                Optional<com.aslaw.entity.Case> caseOpt = caseService.getCaseById(caseId);
+                if (caseOpt.isPresent()) {
+                    com.aslaw.entity.Case caseEntity = caseOpt.get();
+                    return caseEntity.getClient() != null && caseEntity.getClient().getId().equals(currentUser.getId());
+                }
+            }
+            
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
     }
 } 
