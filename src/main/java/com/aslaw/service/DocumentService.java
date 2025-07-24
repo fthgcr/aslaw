@@ -74,6 +74,15 @@ public class DocumentService {
     }
 
     /**
+     * Get document by ID (simple version)
+     */
+    @Transactional(readOnly = true)
+    public Document findById(Long id) {
+        return documentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
+    }
+
+    /**
      * Get documents by case ID
      */
     @Transactional(readOnly = true)
@@ -133,16 +142,22 @@ public class DocumentService {
         String publicUrl = null;
         
         if ("cloudinary".equals(uploadProvider)) {
-            // Upload to Cloudinary
+            // Upload to Cloudinary (PRIVATE)
             Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), 
                 ObjectUtils.asMap(
                     "resource_type", "auto",
                     "folder", "aslaw-documents",
-                    "public_id", UUID.randomUUID().toString()
+                    "public_id", UUID.randomUUID().toString(),
+                    "type", "private"  // PRIVATE UPLOAD
                 ));
             
-            publicUrl = (String) uploadResult.get("secure_url");
-            filePath = (String) uploadResult.get("public_id");
+            // Private dosyalar için signed URL gerekir
+            String publicId = (String) uploadResult.get("public_id");
+            
+            // Private dosya için basit URL (authenticated access gerekir)
+            publicUrl = cloudinary.url().resourceType("auto").type("private").generate(publicId);
+                
+            filePath = publicId;
         } else {
             // Local file storage (development)
             String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
@@ -174,6 +189,10 @@ public class DocumentService {
         document.setFileSize(file.getSize());
         document.setType(type);
         document.setLegalCase(legalCase);
+        
+        // Set storage information
+        document.setStorageType(uploadProvider);
+        document.setIsPrivate("cloudinary".equals(uploadProvider));
         
         // Set public URL if using cloud storage
         if (publicUrl != null) {
@@ -220,40 +239,86 @@ public class DocumentService {
     }
 
     /**
-     * Delete document
+     * Delete document (with Cloudinary support)
      */
     @Transactional
     public void deleteDocument(Long id) {
         Document document = documentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
         
-        // Delete file from disk
         try {
-            Path filePath = Paths.get(document.getFilePath());
-            Files.deleteIfExists(filePath);
-        } catch (IOException e) {
+            if ("cloudinary".equals(uploadProvider) && document.getFilePath() != null) {
+                // Delete from Cloudinary
+                cloudinary.uploader().destroy(document.getFilePath(), 
+                    ObjectUtils.asMap("type", "private", "resource_type", "auto"));
+                System.out.println("🗑️ Cloudinary file deleted: " + document.getFilePath());
+            } else {
+                // Delete local file
+                Path filePath = Paths.get(document.getFilePath());
+                Files.deleteIfExists(filePath);
+                System.out.println("🗑️ Local file deleted: " + document.getFilePath());
+            }
+        } catch (Exception e) {
             // Log error but don't fail the deletion
-            System.err.println("Could not delete file: " + document.getFilePath());
+            System.err.println("⚠️ Could not delete file: " + document.getFilePath() + " - " + e.getMessage());
         }
         
+        // Delete from database
         documentRepository.delete(document);
+        
+        // Log activity (simple log)
+        System.out.println("📋 Document deleted: " + document.getTitle() + " (ID: " + document.getId() + ")");
     }
 
     /**
-     * Get file resource for download
+     * Get file resource for download (with Cloudinary support)
      */
     @Transactional(readOnly = true)
     public Resource getFileResource(Long id) throws MalformedURLException {
         Document document = documentRepository.findByIdWithCaseDetails(id)
                 .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
         
-        Path filePath = Paths.get(document.getFilePath());
-        Resource resource = new UrlResource(filePath.toUri());
-        
-        if (resource.exists() && resource.isReadable()) {
-            return resource;
+        if ("cloudinary".equals(uploadProvider) && document.getPublicUrl() != null) {
+            // For Cloudinary private files, return the signed URL as a UrlResource
+            try {
+                return new UrlResource(document.getPublicUrl());
+            } catch (MalformedURLException e) {
+                throw new RuntimeException("Invalid Cloudinary URL for document: " + document.getFileName(), e);
+            }
         } else {
-            throw new RuntimeException("File not found or not readable: " + document.getFileName());
+            // Local file handling
+            Path filePath = Paths.get(document.getFilePath());
+            Resource resource = new UrlResource(filePath.toUri());
+            
+            if (resource.exists() && resource.isReadable()) {
+                return resource;
+            } else {
+                throw new RuntimeException("File not found or not readable: " + document.getFileName());
+            }
+        }
+    }
+
+    /**
+     * Get signed download URL for Cloudinary private files
+     */
+    @Transactional(readOnly = true)
+    public String getSignedDownloadUrl(Long id) {
+        Document document = findById(id);
+        
+        if ("cloudinary".equals(uploadProvider) && document.getFilePath() != null) {
+            try {
+                // Generate signed URL for private file (valid for 1 hour)
+                return cloudinary.url()
+                    .resourceType("auto")
+                    .type("private")
+                    .signed(true)
+                    .generate(document.getFilePath());
+            } catch (Exception e) {
+                throw new RuntimeException("Could not generate signed URL for document: " + document.getFileName(), e);
+            }
+        } else {
+            // For local files, return the document's public URL or null
+            return document.getPublicUrl();
         }
     }
 

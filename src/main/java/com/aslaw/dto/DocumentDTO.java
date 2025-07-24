@@ -12,6 +12,8 @@ public class DocumentDTO {
     private String description;
     private Document.DocumentType type;
     private String publicUrl;
+    private String storageType;
+    private Boolean isPrivate;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
     
@@ -40,6 +42,8 @@ public class DocumentDTO {
         this.description = document.getDescription();
         this.type = document.getType();
         this.publicUrl = document.getPublicUrl();
+        this.storageType = document.getStorageType();
+        this.isPrivate = document.getIsPrivate();
         this.createdDate = document.getCreatedDate();
         this.updatedDate = document.getUpdatedDate();
         
@@ -86,6 +90,12 @@ public class DocumentDTO {
 
     public String getPublicUrl() { return publicUrl; }
     public void setPublicUrl(String publicUrl) { this.publicUrl = publicUrl; }
+
+    public String getStorageType() { return storageType; }
+    public void setStorageType(String storageType) { this.storageType = storageType; }
+
+    public Boolean getIsPrivate() { return isPrivate; }
+    public void setIsPrivate(Boolean isPrivate) { this.isPrivate = isPrivate; }
 
     public LocalDateTime getCreatedDate() { return createdDate; }
     public void setCreatedDate(LocalDateTime createdDate) { this.createdDate = createdDate; }

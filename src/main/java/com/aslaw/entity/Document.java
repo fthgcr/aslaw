@@ -40,6 +40,12 @@ public class Document {
     @Column(name = "public_url")
     private String publicUrl;
     
+    @Column(name = "storage_type", nullable = false)
+    private String storageType = "local"; // "local" or "cloudinary"
+    
+    @Column(name = "is_private")
+    private Boolean isPrivate = false; // true for private Cloudinary storage
+    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DocumentType type;
@@ -91,6 +97,12 @@ public class Document {
 
     public String getPublicUrl() { return publicUrl; }
     public void setPublicUrl(String publicUrl) { this.publicUrl = publicUrl; }
+
+    public String getStorageType() { return storageType; }
+    public void setStorageType(String storageType) { this.storageType = storageType; }
+
+    public Boolean getIsPrivate() { return isPrivate; }
+    public void setIsPrivate(Boolean isPrivate) { this.isPrivate = isPrivate; }
 
     public DocumentType getType() { return type; }
     public void setType(DocumentType type) { this.type = type; }

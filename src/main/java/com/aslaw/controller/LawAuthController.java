@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/law/auth")
@@ -98,6 +100,24 @@ public class LawAuthController {
     }
 
     // Debug endpoint - production'da kaldırılmalı
+    @GetMapping("/debug/jwt-info")
+    public ResponseEntity<?> jwtInfo() {
+        Map<String, Object> info = new HashMap<>();
+        
+        // JWT Secret info (güvenlik için sadece ilk ve son 5 karakter)
+        String secretMasked = jwtSecret.length() > 10 ? 
+            jwtSecret.substring(0, 5) + "..." + jwtSecret.substring(jwtSecret.length() - 5) : 
+            "TOO_SHORT";
+            
+        info.put("jwtSecretLength", jwtSecret.length());
+        info.put("jwtSecretMasked", secretMasked);
+        info.put("jwtExpirationMs", jwtExpirationMs);
+        info.put("timestamp", System.currentTimeMillis());
+        
+        return ResponseEntity.ok(info);
+    }
+
+    // Debug endpoint - production'da kaldırılmalı
     @PostMapping("/debug/password-test")
     public ResponseEntity<?> testPassword(@RequestBody PasswordTestRequest request) {
         try {
@@ -163,6 +183,37 @@ public class LawAuthController {
             ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body("BCrypt test failed: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/debug/validate-token")
+    public ResponseEntity<?> validateToken(@RequestBody Map<String, String> request) {
+        try {
+            String token = request.get("token");
+            if (token == null || token.isEmpty()) {
+                return ResponseEntity.badRequest().body("Token is required");
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            
+            // Basic token format check
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                response.put("valid", false);
+                response.put("error", "Invalid JWT format - should have 3 parts separated by dots");
+            } else {
+                response.put("valid", true);
+                response.put("message", "Token format is valid (header.payload.signature)");
+                response.put("tokenParts", parts.length);
+            }
+            
+            response.put("tokenLength", token.length());
+            response.put("jwtSecretLength", jwtSecret.length());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Validation error: " + e.getMessage());
         }
     }
 

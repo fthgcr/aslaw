@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -244,6 +245,21 @@ public class DocumentController {
             String cloudName = System.getenv("CLOUDINARY_CLOUD_NAME");
             config.put("cloudinaryConfigured", cloudName != null && !cloudName.isEmpty() && !"dummy".equals(cloudName));
             config.put("cloudName", cloudName != null ? cloudName : "not-set");
+            config.put("storageType", "private");
+            config.put("features", Map.of(
+                "privateStorage", true,
+                "signedUrls", true,
+                "autoBackup", true,
+                "cdn", true
+            ));
+        } else {
+            config.put("storageType", "local");
+            config.put("features", Map.of(
+                "privateStorage", false,
+                "signedUrls", false,
+                "autoBackup", false,
+                "cdn", false
+            ));
         }
         
         return ResponseEntity.ok(config);
@@ -273,6 +289,82 @@ public class DocumentController {
             
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/download-private/{documentId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('LAWYER') or hasRole('CLIENT')")
+    public ResponseEntity<?> downloadPrivateDocument(@PathVariable Long documentId, Authentication authentication) {
+        try {
+            Document document = documentService.findById(documentId);
+
+            // Private Cloudinary dosyası için signed URL döndür
+            if (document.getPublicUrl() != null && document.getPublicUrl().contains("cloudinary")) {
+                
+                String signedUrl = documentService.getSignedDownloadUrl(documentId);
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("downloadUrl", signedUrl);
+                response.put("fileName", document.getFileName());
+                response.put("contentType", document.getContentType());
+                response.put("fileSize", document.getFileSize());
+                response.put("message", "Use this signed URL for secure download (valid for 1 hour)");
+                response.put("expiresIn", "1 hour");
+                
+                return ResponseEntity.ok(response);
+            } else {
+                // Local file için mevcut download metodunu kullan
+                return downloadDocument(documentId);
+            }
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Download error: " + e.getMessage(),
+                "documentId", documentId
+            ));
+        }
+    }
+
+    @GetMapping("/storage-stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> getStorageStats() {
+        try {
+            List<DocumentDTO> allDocuments = documentService.getAllDocuments();
+            
+            Map<String, Object> stats = new HashMap<>();
+            
+            // Total counts
+            stats.put("totalDocuments", allDocuments.size());
+            
+            // Storage type breakdown
+            long cloudinaryCount = allDocuments.stream()
+                .mapToLong(doc -> "cloudinary".equals(doc.getStorageType()) ? 1 : 0)
+                .sum();
+            long localCount = allDocuments.size() - cloudinaryCount;
+            
+            stats.put("cloudinaryDocuments", cloudinaryCount);
+            stats.put("localDocuments", localCount);
+            
+            // File size totals
+            long totalSize = allDocuments.stream()
+                .mapToLong(doc -> doc.getFileSize() != null ? doc.getFileSize() : 0)
+                .sum();
+            
+            stats.put("totalSizeBytes", totalSize);
+            stats.put("totalSizeMB", Math.round(totalSize / (1024.0 * 1024.0) * 100.0) / 100.0);
+            
+            // Current configuration
+            String uploadProvider = System.getenv("UPLOAD_PROVIDER") != null ? 
+                System.getenv("UPLOAD_PROVIDER") : "local";
+            stats.put("currentUploadProvider", uploadProvider);
+            stats.put("timestamp", System.currentTimeMillis());
+            
+            return ResponseEntity.ok(stats);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Could not retrieve storage stats: " + e.getMessage()
+            ));
         }
     }
 
