@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -224,6 +226,54 @@ public class DocumentController {
     public ResponseEntity<List<DocumentDTO>> searchByFileName(@RequestParam String fileName) {
         List<DocumentDTO> documents = documentService.searchDocumentsByFileName(fileName);
         return ResponseEntity.ok(documents);
+    }
+
+    @GetMapping("/upload-config")
+    public ResponseEntity<Map<String, Object>> getUploadConfig() {
+        Map<String, Object> config = new HashMap<>();
+        
+        // Upload provider bilgisi
+        String uploadProvider = System.getProperty("app.upload.provider", 
+            System.getenv("UPLOAD_PROVIDER") != null ? System.getenv("UPLOAD_PROVIDER") : "local");
+        
+        config.put("uploadProvider", uploadProvider);
+        config.put("timestamp", System.currentTimeMillis());
+        
+        // Cloudinary durumu
+        if ("cloudinary".equals(uploadProvider)) {
+            String cloudName = System.getenv("CLOUDINARY_CLOUD_NAME");
+            config.put("cloudinaryConfigured", cloudName != null && !cloudName.isEmpty() && !"dummy".equals(cloudName));
+            config.put("cloudName", cloudName != null ? cloudName : "not-set");
+        }
+        
+        return ResponseEntity.ok(config);
+    }
+
+    @PostMapping("/test-upload")
+    public ResponseEntity<?> testUpload(@RequestParam("file") MultipartFile file) {
+        try {
+            Map<String, Object> response = new HashMap<>();
+            
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body("File is empty");
+            }
+            
+            response.put("fileName", file.getOriginalFilename());
+            response.put("fileSize", file.getSize());
+            response.put("contentType", file.getContentType());
+            
+            // Upload provider kontrol et
+            String uploadProvider = System.getProperty("app.upload.provider", 
+                System.getenv("UPLOAD_PROVIDER") != null ? System.getenv("UPLOAD_PROVIDER") : "local");
+            
+            response.put("uploadProvider", uploadProvider);
+            response.put("message", "File info retrieved successfully. Use /api/documents/upload for actual upload.");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
     }
 
     // DTOs
