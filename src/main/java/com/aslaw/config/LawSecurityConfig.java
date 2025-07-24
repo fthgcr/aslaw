@@ -24,6 +24,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration("lawSecurityConfig")
 @EnableWebSecurity
@@ -32,6 +33,9 @@ import java.util.Arrays;
 public class LawSecurityConfig {
 
     private final LawUserDetailsService lawUserDetailsService;
+
+    @Value("${app.cors.allowed-origins:http://localhost:*,https://localhost:*,https://*.onrender.com,https://*.netlify.app,https://*.vercel.app}")
+    private String[] allowedOrigins;
 
     @Bean("lawPasswordEncoder")
     @Primary
@@ -107,8 +111,14 @@ public class LawSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        
+        // Environment variable'dan veya default değerlerden origin'leri al
+        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins));
+        
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+        
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(Arrays.asList("Authorization"));

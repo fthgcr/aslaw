@@ -22,7 +22,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/cases")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class CaseController {
 
     private final CaseService caseService;

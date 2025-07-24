@@ -7,6 +7,7 @@ import com.aslaw.repository.CaseRepository;
 import com.aslaw.service.DocumentService;
 import com.infracore.entity.User;
 import com.infracore.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -24,17 +25,14 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/documents")
-@CrossOrigin(origins = "http://localhost:4200")
+@RequiredArgsConstructor
 public class DocumentController {
 
-    @Autowired
-    private DocumentService documentService;
+    private final DocumentService documentService;
 
-    @Autowired
-    private CaseRepository caseRepository;
+    private final CaseRepository caseRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     /**
      * Get all documents
