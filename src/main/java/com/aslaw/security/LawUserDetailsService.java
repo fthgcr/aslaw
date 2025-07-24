@@ -5,6 +5,7 @@ import com.aslaw.repository.LawUserRepository;
 import com.infracore.entity.User;
 import com.infracore.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 @Service
+@Primary
 @RequiredArgsConstructor
 public class LawUserDetailsService implements UserDetailsService {
 
@@ -30,6 +32,8 @@ public class LawUserDetailsService implements UserDetailsService {
                     .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
             
             System.out.println("LawUserDetailsService: User found: " + user.getUsername() + ", active: " + user.isActive());
+            System.out.println("LawUserDetailsService: User password (encoded): " + user.getPassword());
+            System.out.println("LawUserDetailsService: User enabled: " + user.isEnabled());
             
             // Check if user account is active
             if (!user.isActive()) {

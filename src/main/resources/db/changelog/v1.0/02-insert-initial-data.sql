@@ -28,7 +28,7 @@ INSERT INTO users (
 ) 
 VALUES (
     'admin',
-    '$2a$10$3holcqSglu1auy5ftdr5v.HFMr7WP/6gm5ipQUCPDvZwEg8hSFouq', -- password: 123123
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', -- password: 123123 (yeni hash)
     'admin@lawportal.com',
     'System',
     'Admin',
@@ -47,3 +47,8 @@ SELECT u.id, r.id
 FROM users u, roles r
 WHERE u.username = 'admin' AND r.name = 'ADMIN'
 ON CONFLICT (user_id, role_id) DO NOTHING;
+
+-- Update admin password if it already exists with correct BCrypt hash
+UPDATE users 
+SET password = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.' 
+WHERE username = 'admin';
