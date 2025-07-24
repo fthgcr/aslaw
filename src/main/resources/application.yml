@@ -18,7 +18,8 @@ spring:
         format_sql: false
     open-in-view: false
   liquibase:
-    enabled: false
+    enabled: ${LIQUIBASE_ENABLED:false}
+    change-log: classpath:db/changelog/db.changelog-master.yaml
 
 springdoc:
   api-docs:

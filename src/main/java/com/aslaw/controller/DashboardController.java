@@ -7,11 +7,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/dashboard")
 public class DashboardController {
 
     private final DashboardService dashboardService;
+
+    @Autowired
+    private DataSource dataSource;
 
     @Autowired
     public DashboardController(DashboardService dashboardService) {
@@ -109,5 +117,30 @@ public class DashboardController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating test activities");
         }
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> health() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Database connection test
+            try (Connection connection = dataSource.getConnection()) {
+                response.put("database", "connected");
+                response.put("url", connection.getMetaData().getURL());
+            }
+        } catch (Exception e) {
+            response.put("database", "error: " + e.getMessage());
+        }
+        
+        response.put("status", "ok");
+        response.put("timestamp", System.currentTimeMillis());
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/test")
+    public ResponseEntity<String> test() {
+        return ResponseEntity.ok("Dashboard API is working!");
     }
 } 
