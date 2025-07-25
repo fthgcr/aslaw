@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.security.core.Authentication;
 import java.util.Optional;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/cases")
@@ -322,6 +324,34 @@ public class CaseController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    /**
+     * Debug CORS configuration
+     */
+    @GetMapping("/cors-debug")
+    public ResponseEntity<Map<String, Object>> debugCors(HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        String origin = request.getHeader("Origin");
+        String referer = request.getHeader("Referer");
+        String userAgent = request.getHeader("User-Agent");
+        
+        // Environment variable'dan CORS ayarlarını al
+        String corsAllowedOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
+        
+        response.put("requestOrigin", origin);
+        response.put("requestReferer", referer);
+        response.put("userAgent", userAgent);
+        response.put("corsAllowedOrigins", corsAllowedOrigins);
+        response.put("serverTime", java.time.LocalDateTime.now().toString());
+        response.put("message", "CORS Debug endpoint working");
+        
+        System.out.println("CORS Debug - Origin: " + origin);
+        System.out.println("CORS Debug - Referer: " + referer);
+        System.out.println("CORS Debug - CORS_ALLOWED_ORIGINS env: " + corsAllowedOrigins);
+        
+        return ResponseEntity.ok(response);
     }
 
     // Request DTO for case creation/update
