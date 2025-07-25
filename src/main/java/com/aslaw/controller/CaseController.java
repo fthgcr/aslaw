@@ -22,6 +22,8 @@ import org.springframework.security.core.Authentication;
 import java.util.Optional;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
+import org.springframework.security.core.GrantedAuthority;
+import java.util.Collection;
 
 @RestController
 @RequestMapping("/api/cases")
@@ -77,19 +79,44 @@ public class CaseController {
      * Get current client's own cases (Client access)
      */
     @GetMapping("/my-cases")
-    @PreAuthorize("hasRole('CLIENT') or hasRole('USER')")
-    public ResponseEntity<List<Case>> getMyOwnCases() {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<Case>> getMyOwnCases(Authentication authentication) {
         try {
             // Get current user from security context
-            String currentUsername = org.springframework.security.core.context.SecurityContextHolder
-                    .getContext().getAuthentication().getName();
+            String currentUsername = authentication.getName();
+            System.out.println("CaseController: Getting my-cases for user: " + currentUsername);
             
             User currentUser = userRepository.findByUsername(currentUsername)
                     .orElseThrow(() -> new RuntimeException("Current user not found"));
             
-            List<Case> cases = caseService.getCasesByClientId(currentUser.getId());
-            return ResponseEntity.ok(cases);
+            // Get user roles for debugging
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+            boolean isLawyer = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_LAWYER"));
+            boolean isClerk = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_CLERK"));
+            boolean isClient = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_CLIENT") || auth.getAuthority().equals("ROLE_USER"));
+            
+            System.out.println("CaseController: User roles - Admin: " + isAdmin + ", Lawyer: " + isLawyer + 
+                             ", Clerk: " + isClerk + ", Client: " + isClient);
+            
+            // If user is a legal professional (Admin, Lawyer, Clerk), return all cases they're involved in
+            if (isAdmin || isLawyer || isClerk) {
+                List<Case> assignedCases = caseService.getCasesByUserId(currentUser.getId());
+                System.out.println("CaseController: Legal professional - returning " + assignedCases.size() + " assigned cases");
+                return ResponseEntity.ok(assignedCases);
+            }
+            
+            // If user is a client, return their own cases
+            List<Case> clientCases = caseService.getCasesByClientId(currentUser.getId());
+            System.out.println("CaseController: Client - returning " + clientCases.size() + " client cases");
+            return ResponseEntity.ok(clientCases);
+            
         } catch (Exception e) {
+            System.out.println("CaseController: Error getting my-cases: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -352,6 +379,66 @@ public class CaseController {
         System.out.println("CORS Debug - CORS_ALLOWED_ORIGINS env: " + corsAllowedOrigins);
         
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Debug current user's authentication info
+     */
+    @GetMapping("/debug/auth-info")
+    public ResponseEntity<Map<String, Object>> debugAuthInfo(Authentication authentication) {
+        try {
+            Map<String, Object> response = new HashMap<>();
+            
+            if (authentication == null) {
+                response.put("error", "No authentication found");
+                return ResponseEntity.status(401).body(response);
+            }
+            
+            String username = authentication.getName();
+            Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+            
+            response.put("username", username);
+            response.put("isAuthenticated", authentication.isAuthenticated());
+            response.put("authoritiesCount", authorities.size());
+            response.put("authorities", authorities.stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(java.util.stream.Collectors.toList()));
+            
+            // Check specific roles
+            response.put("hasRoleADMIN", authorities.stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")));
+            response.put("hasRoleLAWYER", authorities.stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_LAWYER")));
+            response.put("hasRoleCLERK", authorities.stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_CLERK")));
+            response.put("hasRoleCLIENT", authorities.stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_CLIENT")));
+            response.put("hasRoleUSER", authorities.stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER")));
+            
+            // Try to get user from database
+            try {
+                User user = userRepository.findByUsername(username).orElse(null);
+                if (user != null) {
+                    response.put("userIdInDb", user.getId());
+                    response.put("userEnabledInDb", user.isEnabled());
+                    response.put("userRolesInDb", user.getRoles().stream()
+                            .map(role -> role.getName().name())
+                            .collect(java.util.stream.Collectors.toList()));
+                }
+            } catch (Exception e) {
+                response.put("dbUserError", e.getMessage());
+            }
+            
+            System.out.println("CaseController: Auth debug for user: " + username);
+            System.out.println("CaseController: Authorities: " + authorities);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.out.println("CaseController: Auth debug error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
     // Request DTO for case creation/update
