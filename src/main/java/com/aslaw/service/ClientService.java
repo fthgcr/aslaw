@@ -73,7 +73,7 @@ public class ClientService {
             throw new IllegalArgumentException("Kullanıcı adı gereklidir");
         }
         if (client.getEmail() == null || client.getEmail().trim().isEmpty()) {
-            throw new IllegalArgumentException("Email gereklidir");
+            client.setEmail(client.getUsername() + "@lexofis.com");
         }
         // Generate username if not provided but firstName and lastName are available
         if ((client.getUsername() == null || client.getUsername().trim().isEmpty()) &&
